@@ -5,19 +5,11 @@
 # It will automatically create the environment if it does not already exist,
 # activate it, and install required dependencies.
 
-# How to use this script, run the following:
-#   chmod +x env_setup.sh
-#   ./env_setup.sh
-
-
 # Check if conda is installed.
 if ! command -v conda &> /dev/null; then
     echo "Error: conda is not installed. Please install Anaconda or Miniconda first."
     exit 1
 fi
-
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
-echo "Script directory: $SCRIPT_DIR"
 
 ENV_NAME="poker_env"
 PYTHON_VERSION="3.11"
@@ -30,10 +22,3 @@ else
     conda create -y --name "${ENV_NAME}" python=${PYTHON_VERSION}
 fi
 
-# Activate the environment.
-echo "Activating conda environment '${ENV_NAME}'..."
-# Source conda's shell script to enable 'conda activate'
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "${ENV_NAME}"
-
-pip install -r "$SCRIPT_DIR/requirements.txt"

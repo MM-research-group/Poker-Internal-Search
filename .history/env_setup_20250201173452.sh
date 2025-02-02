@@ -16,9 +16,6 @@ if ! command -v conda &> /dev/null; then
     exit 1
 fi
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
-echo "Script directory: $SCRIPT_DIR"
-
 ENV_NAME="poker_env"
 PYTHON_VERSION="3.11"
 

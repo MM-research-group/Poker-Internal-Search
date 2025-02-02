@@ -6,7 +6,7 @@
 # activate it, and install required dependencies.
 
 # How to use this script, run the following:
-#   chmod +x env_setup.sh
+#   1. chmod +x env_setup.sh
 #   ./env_setup.sh
 
 
@@ -15,9 +15,6 @@ if ! command -v conda &> /dev/null; then
     echo "Error: conda is not installed. Please install Anaconda or Miniconda first."
     exit 1
 fi
-
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
-echo "Script directory: $SCRIPT_DIR"
 
 ENV_NAME="poker_env"
 PYTHON_VERSION="3.11"

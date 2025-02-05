@@ -39,7 +39,7 @@ Board Analysis Verification:
 Output Requirements:
 - Provide a revised version of the math and board analysis sections with corrections applied.
 - Include a brief summary of the changes you made.
-- If any relevant analysis sections (mathematical computations or board analysis) are missing that you think would be beneficial, please mention it in your report.
+- If any targeted section (mathematical computations or board analysis) is missing, explicitly mention it in your response.
 
 Game State: {gamestate}
 Optimal Action: {optimal_action}
@@ -62,7 +62,12 @@ Opponent Range Analysis Verification:
 Output Requirements:
 - Provide a revised version of the opponent range estimation section with corrections applied.
 - Include a brief summary of the changes you made.
-- If the explanation is missing an range analysis, make sure to add your analysis.
+- If the explanation is missing an analysis of opponent range, explicitly mention this in your output.
+
+Please provide your response strictly in a structured JSON format (i.e. only the JSON object without any additional text) with the following keys:
+- "revised_text": The corrected opponent range estimation analysis.
+- "summary_of_changes": A summary of modifications and corrections made.
+- "missing_sections": A list of any missing sections (or an empty list if none are missing).
 
 Game State: {gamestate}
 Optimal Action: {optimal_action}
@@ -81,7 +86,7 @@ You are an expert poker strategist tasked with a comprehensive review of the cha
 Your objectives are:
 
 Evaluate Revisions:
-- Determine if the corrections make sense, if there are any.
+- Do the corrections make sense, if there are any?
 
 Overall Coherence and Accuracy:
 - Integrate the corrections from the math/board analysis and opponent range estimation outputs into a final chain-of-thought explanation.
@@ -93,11 +98,17 @@ Hallucination and Inconsistency Detection:
 - If there are any issues, provide detailed annotations and suggest further corrections if necessary.
 
 Removal of Optimal Action References:
-- Ensure that the final verified reasoning (chain-of-thought explanation) does not include any reference to the optimal action. Remove any such details so that the reasoning stands alone.
+- It is imperative that the final verified reasoning (chain-of-thought explanation) does not include any reference to the optimal action. Remove any such details so that the reasoning stands alone.
 
 Final Output Requirements:
 - Present a fully revised and integrated chain-of-thought explanation that is self-contained, free of any optimal action details, and adheres to strong game theory optimal poker concepts.
 - Provide a brief summary of the changes and corrections made during your review.
+- If any sections are still missing after integration, explicitly list them.
+
+Please provide your response strictly in a structured JSON format (i.e. only the JSON object without any additional text) with the following keys:
+- "final_chain_of_thought": The fully revised and integrated chain-of-thought explanation.
+- "summary_of_changes": A summary of the modifications and corrections applied.
+- "missing_sections": A list of any sections that are missing (or an empty list if none are missing).
 
 Below are the inputs:
 

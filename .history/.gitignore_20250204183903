@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# dataset files
+*.json
+*.csv
+
+*test

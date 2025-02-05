@@ -39,7 +39,7 @@ Board Analysis Verification:
 Output Requirements:
 - Provide a revised version of the math and board analysis sections with corrections applied.
 - Include a brief summary of the changes you made.
-- If any relevant analysis sections (mathematical computations or board analysis) are missing that you think would be beneficial, please mention it in your report.
+- If any targeted section (mathematical computations or board analysis) is missing, explicitly mention it in your response.
 
 Game State: {gamestate}
 Optimal Action: {optimal_action}
@@ -62,7 +62,7 @@ Opponent Range Analysis Verification:
 Output Requirements:
 - Provide a revised version of the opponent range estimation section with corrections applied.
 - Include a brief summary of the changes you made.
-- If the explanation is missing an range analysis, make sure to add your analysis.
+- If the explanation is missing an analysis of opponent range, explicitly mention this in your response.
 
 Game State: {gamestate}
 Optimal Action: {optimal_action}

@@ -39,7 +39,7 @@ Board Analysis Verification:
 Output Requirements:
 - Provide a revised version of the math and board analysis sections with corrections applied.
 - Include a brief summary of the changes you made.
-- If any relevant analysis sections (mathematical computations or board analysis) are missing that you think would be beneficial, please mention it in your report.
+- If any relevant analysis sections (mathematical computations or board analysis) are missing that you think would be beneficial, please mention it.
 
 Game State: {gamestate}
 Optimal Action: {optimal_action}

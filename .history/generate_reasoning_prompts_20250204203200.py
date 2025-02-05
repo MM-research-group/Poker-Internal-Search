@@ -39,7 +39,7 @@ Board Analysis Verification:
 Output Requirements:
 - Provide a revised version of the math and board analysis sections with corrections applied.
 - Include a brief summary of the changes you made.
-- If any relevant analysis sections (mathematical computations or board analysis) are missing that you think would be beneficial, please mention it in your report.
+- If any targeted section (mathematical computations or board analysis) is missing, explicitly mention it in your response.
 
 Game State: {gamestate}
 Optimal Action: {optimal_action}
@@ -97,7 +97,6 @@ Removal of Optimal Action References:
 
 Final Output Requirements:
 - Present a fully revised and integrated chain-of-thought explanation that is self-contained, free of any optimal action details, and adheres to strong game theory optimal poker concepts.
-- Provide a brief summary of the changes and corrections made during your review.
 
 Below are the inputs:
 

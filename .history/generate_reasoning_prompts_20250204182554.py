@@ -92,8 +92,7 @@ You are an expert poker strategist tasked with a comprehensive review of the cha
 
 Your objectives are:
 
-Evaluate Revisions:
-- Do the corrections make sense, if there are any?
+Evaluate 
 
 Overall Coherence and Accuracy:
 - Integrate the corrections from the math/board analysis and opponent range estimation outputs into a final chain-of-thought explanation.

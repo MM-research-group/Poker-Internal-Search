@@ -87,35 +87,30 @@ def prompt_meta_verifier(gamestate, optimal_action, proposed_reasoning, math_boa
     prompt = """
 You are an expert poker strategist tasked with a comprehensive review of the chain-of-thought explanation for a poker scenario. In this review, you have access to multiple sources:
 1. The original proposed chain-of-thought explanation.
-2. The revised math and board analysis output (see below).
-3. The revised opponent range estimation output (see below).
+2. The revised math and board analysis output, provided below.
+3. The revised opponent range estimation output, provided below.
 
 Your objectives are:
 
-Evaluate Revisions:
-- Do the corrections make sense, if there are any?
-
 Overall Coherence and Accuracy:
-- Integrate the corrections from the math/board analysis and opponent range estimation outputs into a final chain-of-thought explanation.
+- Integrate any corrections from the math/board analysis and opponent range estimation outputs into a final chain-of-thought explanation.
 - Ensure that every part of the final explanation is logically consistent and factually correct according to standard poker strategy.
-- Verify that all mathematical computations, board analyses, and opponent range analyses are valid and coherently merged.
+- Verify that all mathematical computations, board analyses, and opponent range analyses are valid and coherently merged with the rest of the reasoning.
 
 Hallucination and Inconsistency Detection:
 - Identify any remaining hallucinations, misrepresentations, or logical inconsistencies in the combined explanation.
 - If there are any issues, provide detailed annotations and suggest further corrections if necessary.
 
 Removal of Optimal Action References:
-- It is imperative that the final verified reasoning (chain-of-thought explanation) does not include any reference to the optimal action. Remove any such details so that the reasoning stands alone.
+- It is imperative that the final verified reasoning steps (explanation) does not include any reference to the optimal action. This is because we want the optimal action to come after the reasoning steps. Remove any such details so that the reasoning stands alone.
 
 Final Output Requirements:
-- Present a fully revised and integrated chain-of-thought explanation that is self-contained, free of any optimal action details, and adheres to strong game theory optimal poker concepts.
+- Present a fully revised and integrated reasoning steps (chain-of-thought explanation) that is self-contained, free of any optimal action details, and adheres to strong game theory optimal poker concepts.
 - Provide a brief summary of the changes and corrections made during your review.
-- If any sections are still missing after integration, explicitly list them.
 
-Please provide your response strictly in a structured JSON format (i.e. only the JSON object without any additional text) with the following keys:
+Please provide your response in a structured JSON format with the following keys:
 - "final_chain_of_thought": The fully revised and integrated chain-of-thought explanation.
 - "summary_of_changes": A summary of the modifications and corrections applied.
-- "missing_sections": A list of any sections that are missing (or an empty list if none are missing).
 
 Below are the inputs:
 

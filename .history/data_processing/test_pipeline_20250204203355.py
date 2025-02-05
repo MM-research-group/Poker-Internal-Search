@@ -28,11 +28,6 @@ def call_model(prompt_text, role="user", model="deepseek-ai/DeepSeek-R1"):
     return completion.choices[0].message.content
 
 def main():
-    # Define the model name to use.
-    model_name = "deepseek-ai/DeepSeek-R1"
-    # Create a filesystem-friendly version of the model name (replace '/' with '_').
-    safe_model_name = model_name.replace("/", "_")
-    
     # Load the PokerBench dataset and select a single datapoint.
     ds = load_dataset("RZ412/PokerBench")
     example = ds["train"][0]  # Use the first datapoint for testing
@@ -42,20 +37,15 @@ def main():
     optimal_action = example.get("output", "")
     
     # Create a "results" directory if it doesn't exist.
-    base_results_dir = "results"
-    if not os.path.exists(base_results_dir):
-        os.makedirs(base_results_dir)
-    
-    # Create a subdirectory for the current model.
-    model_results_dir = os.path.join(base_results_dir, safe_model_name)
-    if not os.path.exists(model_results_dir):
-        os.makedirs(model_results_dir)
+    results_dir = "results"
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
     
     # -----------------------------
     # Step 1: Proposer Module
     # -----------------------------
     proposer_prompt = prompt_proposer(gamestate, optimal_action)
-    proposer_response = call_model(proposer_prompt, model=model_name)
+    proposer_response = call_model(proposer_prompt)
     
     # Instead of parsing JSON, we simply save the raw string response.
     proposer_output = {
@@ -67,14 +57,14 @@ def main():
     proposed_reasoning = proposer_response
     
     # Save the proposer output.
-    with open(os.path.join(model_results_dir, "proposer_output.json"), "w") as f:
+    with open(os.path.join(results_dir, "proposer_output.json"), "w") as f:
         json.dump(proposer_output, f, indent=4)
     
     # -----------------------------
     # Step 2: Math & Board Analysis Verifier
     # -----------------------------
     math_board_prompt = prompt_math_board_verifier(gamestate, optimal_action, proposed_reasoning)
-    math_board_response = call_model(math_board_prompt, model=model_name)
+    math_board_response = call_model(math_board_prompt)
     
     math_board_output = {
         "raw_response": math_board_response,
@@ -83,14 +73,14 @@ def main():
     }
     
     # Save the math and board analysis verifier output.
-    with open(os.path.join(model_results_dir, "math_board_output.json"), "w") as f:
+    with open(os.path.join(results_dir, "math_board_output.json"), "w") as f:
         json.dump(math_board_output, f, indent=4)
     
     # -----------------------------
     # Step 3: Opponent Range Estimation Verifier
     # -----------------------------
     range_estimation_prompt = prompt_range_estimation_verifier(gamestate, optimal_action, proposed_reasoning)
-    range_estimation_response = call_model(range_estimation_prompt, model=model_name)
+    range_estimation_response = call_model(range_estimation_prompt)
     
     range_estimation_output = {
         "raw_response": range_estimation_response,
@@ -99,7 +89,7 @@ def main():
     }
     
     # Save the opponent range estimation verifier output.
-    with open(os.path.join(model_results_dir, "range_estimation_output.json"), "w") as f:
+    with open(os.path.join(results_dir, "range_estimation_output.json"), "w") as f:
         json.dump(range_estimation_output, f, indent=4)
     
     # -----------------------------
@@ -112,7 +102,7 @@ def main():
         math_board_response,      # pass the raw math & board response
         range_estimation_response  # pass the raw opponent range response
     )
-    meta_response = call_model(meta_prompt, model=model_name)
+    meta_response = call_model(meta_prompt)
     
     meta_output = {
         "raw_response": meta_response,
@@ -121,10 +111,10 @@ def main():
     }
     
     # Save the meta verifier output.
-    with open(os.path.join(model_results_dir, "meta_output.json"), "w") as f:
+    with open(os.path.join(results_dir, "meta_output.json"), "w") as f:
         json.dump(meta_output, f, indent=4)
     
-    print("Pipeline processing complete. Check the 'results/{}' directory for each module's output.".format(safe_model_name))
+    print("Pipeline processing complete. Check the 'results' directory for each module's output.")
 
 if __name__ == "__main__":
     main()

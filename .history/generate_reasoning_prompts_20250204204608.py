@@ -89,13 +89,15 @@ Overall Coherence and Accuracy:
 - Verify that all mathematical computations, board analyses, and opponent range analyses are valid and coherently merged.
 
 Hallucination and Inconsistency Detection:
-- If you see any remaining hallucinations, misrepresentations, or logical inconsistencies in the combined explanation, please fix it.
+- If you see any remaining hallucinations, misrepresentations, or logical inconsistencies in the combined explanation.
+- If there are any issues, provide detailed annotations and suggest further corrections if necessary.
 
 Removal of Optimal Action References:
 - Ensure that the final verified reasoning (chain-of-thought explanation) does not include any reference to the optimal action. Remove any such details so that the reasoning stands alone.
 
 Final Output Requirements:
-- In your final response, present only the fully revised and integrated chain-of-thought explanation that is self-contained, free of any optimal action details, and adheres to strong game theory optimal poker concepts.
+- Present a fully revised and integrated chain-of-thought explanation that is self-contained, free of any optimal action details, and adheres to strong game theory optimal poker concepts.
+- Provide a brief summary of the changes and corrections made during your review.
 
 Below are the inputs:
 

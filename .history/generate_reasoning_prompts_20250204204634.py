@@ -95,7 +95,7 @@ Removal of Optimal Action References:
 - Ensure that the final verified reasoning (chain-of-thought explanation) does not include any reference to the optimal action. Remove any such details so that the reasoning stands alone.
 
 Final Output Requirements:
-- In your final response, present only the fully revised and integrated chain-of-thought explanation that is self-contained, free of any optimal action details, and adheres to strong game theory optimal poker concepts.
+- Present a fully revised and integrated chain-of-thought explanation that is self-contained, free of any optimal action details, and adheres to strong game theory optimal poker concepts.
 
 Below are the inputs:
 

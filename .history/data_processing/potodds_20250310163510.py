@@ -37,10 +37,15 @@ def get_call_amount_postflop(postflop_action, hero_pos):
 
     if dealcard_indices:
         last_deal_idx = max(dealcard_indices)
-        relevant_actions = tokens[last_deal_idx + 2:]
+        # If the token is exactly 'dealcards', then the card is in the next token; skip both tokens
+        if tokens[last_deal_idx] == "dealcards":
+            relevant_actions = tokens[last_deal_idx + 2:]
+        else:
+            relevant_actions = tokens[last_deal_idx + 1:]
     else:
         relevant_actions = tokens  # If no "dealcards", consider entire action string
 
+    # Track the hero's contributions in the current round
     hero_contribution = 0.0
     bet_tokens = []
 

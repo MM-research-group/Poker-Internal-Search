@@ -41,6 +41,7 @@ def get_call_amount_postflop(postflop_action, hero_pos):
     else:
         relevant_actions = tokens  # If no "dealcards", consider entire action string
 
+    # Track the hero's contributions in the current round
     hero_contribution = 0.0
     bet_tokens = []
 

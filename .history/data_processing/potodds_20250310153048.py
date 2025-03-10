@@ -1,11 +1,10 @@
 # potodds.py
 
-# this file processes all csvs in specified directory. 
+# this file processes all csvs in a directory. 
 # for both preflop and postflop gamestate configurations
 # it checks if potodds are applicable (aka does "call" exist in available_moves column?). 
 # if yes, it calculates the pot odds for that gamestate and saves it.
-
-# how to run the script: python data_processing/potodds.py /path/to/csv_directory
+# how to run the script: python potodds.py /path/to/csv_directory 
 
 import pandas as pd
 import ast
@@ -26,43 +25,25 @@ def is_pot_odds_applicable(row):
 
 def get_call_amount_postflop(postflop_action, hero_pos):
     """
-    Extract the call amount from the opponent's last bet or raise in the most recent betting round.
-    If "dealcards" exists, only consider actions after the last "dealcards/{card}" token.
+    Given the postflop_action string and hero's position (IP or OOP), 
+    extract the call amount from the opponent's last bet or raise.
+    If hero is IP, opponent actions start with "OOP_".
+    If hero is OOP, opponent actions start with "IP_".
+    Searches for tokens starting with opponent's prefix followed by "BET" or "RAISE" and extracts the numeric value.
+    Returns a float call amount, or None if not found.
     """
     opponent_prefix = "OOP_" if hero_pos.upper() == "IP" else "IP_"
-    hero_prefix = "IP_" if hero_pos.upper() == "IP" else "OOP_"
-
+    # Split the action string by "/" into tokens.
     tokens = postflop_action.split("/")
-    dealcard_indices = [i for i, token in enumerate(tokens) if token.startswith("dealcards")]
-
-    if dealcard_indices:
-        last_deal_idx = max(dealcard_indices)
-        relevant_actions = tokens[last_deal_idx + 2:]
-    else:
-        relevant_actions = tokens  # If no "dealcards", consider entire action string
-
-    hero_contribution = 0.0
-    bet_tokens = []
-
-    for token in relevant_actions:
-        if token.startswith(opponent_prefix + "BET") or token.startswith(opponent_prefix + "RAISE"):
-            bet_tokens.append(token)
-        elif token.startswith(hero_prefix + "BET") or token.startswith(hero_prefix + "RAISE"):
-            match = re.search(r'(\d+(\.\d+)?)', token)
-            if match:
-                hero_contribution += float(match.group(1))
-
+    bet_tokens = [token for token in tokens if token.startswith(opponent_prefix + "BET") or token.startswith(opponent_prefix + "RAISE")]
     if not bet_tokens:
         return None
-
-    # Get the last opponent's bet/raise
+    # Take the last occurrence and extract numeric part.
     last_token = bet_tokens[-1]
+    # Use regex to extract number (can be integer or float)
     match = re.search(r'(\d+(\.\d+)?)', last_token)
-
     if match:
-        opponent_bet = float(match.group(1))
-        return max(0, opponent_bet - hero_contribution)  # Ensure non-negative value
-
+        return float(match.group(1))
     return None
 
 def get_call_amount_preflop(prev_line, available_moves, hero_pos, initial_stack=100.0):
@@ -147,20 +128,16 @@ def process_csv_file(file_path):
     def extract_call_amount(row):
         if not row['pot_odds_applicable']:
             return None
-
         if is_postflop:
             # Use postflop_action column and hero_position
             postflop_action = row.get('postflop_action', "")
             hero_pos = row.get('hero_position', "").strip()
             return get_call_amount_postflop(postflop_action, hero_pos)
-
         elif is_preflop:
-            # Use prev_line column and hero_pos (rather than hero_position)
+            # Use prev_line column (fallback to available_moves if needed)
             prev_line = row.get('prev_line', "")
             available_moves = row.get('available_moves', "")
-            hero_pos = row.get('hero_pos', "").strip()  # <-- Extract hero_pos for preflop
-            return get_call_amount_preflop(prev_line, available_moves, hero_pos)
-
+            return get_call_amount_preflop(prev_line, available_moves)
         else:
             # If file type not determined, return None
             return None
@@ -181,7 +158,7 @@ def process_csv_file(file_path):
     # Save processed CSV
     base_name = os.path.basename(file_path)
     name, ext = os.path.splitext(base_name)
-    output_file = os.path.join(os.path.dirname(file_path), f"{name}_withpotodds{ext}")
+    output_file = os.path.join(os.path.dirname(file_path), f"{name}_labeled{ext}")
     df.to_csv(output_file, index=False)
     print(f"Processed {file_path} -> {output_file}")
 

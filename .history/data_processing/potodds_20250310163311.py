@@ -32,15 +32,19 @@ def get_call_amount_postflop(postflop_action, hero_pos):
     opponent_prefix = "OOP_" if hero_pos.upper() == "IP" else "IP_"
     hero_prefix = "IP_" if hero_pos.upper() == "IP" else "OOP_"
 
+    # Split actions
     tokens = postflop_action.split("/")
+
+    # Check if "dealcards/" exists before using max()
     dealcard_indices = [i for i, token in enumerate(tokens) if token.startswith("dealcards")]
 
     if dealcard_indices:
-        last_deal_idx = max(dealcard_indices)
-        relevant_actions = tokens[last_deal_idx + 2:]
+        last_deal_idx = max(dealcard_indices)  # Last occurrence of "dealcards/"
+        relevant_actions = tokens[last_deal_idx + 1 :]  # Actions after the last dealcards
     else:
-        relevant_actions = tokens  # If no "dealcards", consider entire action string
+        relevant_actions = tokens  # If no "dealcards/", consider entire action string
 
+    # Track the hero's contributions in the current round
     hero_contribution = 0.0
     bet_tokens = []
 

@@ -67,26 +67,29 @@ def get_call_amount_postflop(postflop_action, hero_pos):
 
 def get_call_amount_preflop(prev_line, available_moves, hero_pos, initial_stack=100.0):
     """
-    For a preflop dataset, extract the call amount from the prev_line string.
-    
-    Heuristic:
-      - Split the string by "/" and search for tokens that contain either "bb" or "allin" (case-insensitive).
-      - Use the token that appears last in the sequence.
-      - If that token contains "allin", compute the call amount as the hero's remaining stack:
-            remaining_stack = initial_stack - (sum of all hero contributions from prev_line)
-      - If the token contains "bb", extract and return the numeric value from that token.
-      
-    Returns a float representing the call amount or None if not found.
+    Extract the call amount in preflop situations based on prior actions.
+
+    Logic:
+      - If prev_line is empty or invalid:
+            - Assume the call amount is the Big Blind (1.0bb) minus the hero's contribution.
+      - Else:
+            - Split prev_line by "/" and search for tokens containing "bb" or "allin" (case-insensitive).
+            - Use the last such token.
+            - If the token contains "allin", compute call amount as:
+                  initial_stack - hero's contribution.
+            - If it contains "bb", extract the numeric value and subtract hero's contribution.
+      - for definition of hero's contribution as per 'get_hero_contribution()'.
+
+    Returns:
+        Float: The required call amount (non-negative).
     """
-    if not isinstance(prev_line, str) or not prev_line.strip():
-        return None
+    if not prev_line or not isinstance(prev_line, str):
+        return 1.0 - get_hero_contribution(prev_line, hero_pos)
 
     tokens = prev_line.split("/")
     # Gather tokens containing either "bb" or "allin"
     valid_tokens = [(i, token) for i, token in enumerate(tokens)
                     if "bb" in token.lower() or "allin" in token.lower()]
-    if not valid_tokens:
-        return None
     
     # Use the token with the highest index (i.e. the last occurrence)
     _, last_token = max(valid_tokens, key=lambda x: x[0])
@@ -100,29 +103,63 @@ def get_call_amount_preflop(prev_line, available_moves, hero_pos, initial_stack=
     elif "bb" in token_lower:
         match = re.search(r'(\d+(\.\d+)?)', last_token)
         if match:
-            return float(match.group(1))
+            final_raise = float(match.group(1))
+            # Subtract the hero's prior contribution
+            hero_contrib = get_hero_contribution(prev_line, hero_pos)
+            call_amount = final_raise - hero_contrib
+            # In case hero_already_contrib >= final_raise, ensure it doesn't go negative
+            return max(call_amount, 0.0)
     return None
 
 def get_hero_contribution(prev_line, hero_pos):
     """
-    Parse the prev_line string to find all occurrences of hero_pos (case-insensitive)
-    and sum up the numeric values in the token immediately following each occurrence that contains 'bb'.
-    This represents the total amount the hero has already contributed.
+    Logic:
+      - Use latest occurrence of hero.
+      - If it's 'bb', take amount.
+      - If it's 'call', backtrack to find last bet size(last raise or BB's 1bb).
+      - If no explicit action, default SB = 0.5bb, BB = 1bb.
     """
     if not prev_line or not isinstance(prev_line, str):
-        return 0.0
+        return 0.5 if hero_pos.upper() == "SB" else 1.0 if hero_pos.upper() == "BB" else 0.0
+
     tokens = prev_line.split("/")
-    hero_contrib = 0.0
-    for i, token in enumerate(tokens):
-        if token.strip().lower() == hero_pos.lower():
-            # Check the next token for a bet amount if it exists
+    hero_contrib = None
+
+    # Search for latest hero action
+    for i in range(len(tokens)):
+        if tokens[i].strip().lower() == hero_pos.lower():
             if i + 1 < len(tokens):
-                next_token = tokens[i+1]
-                if "bb" in next_token.lower():
+                next_token = tokens[i + 1].lower()
+                if "bb" in next_token:
                     match = re.search(r'(\d+(\.\d+)?)', next_token)
                     if match:
-                        hero_contrib += float(match.group(1))
+                        hero_contrib = float(match.group(1))
+                elif "call" in next_token:
+                    hero_contrib = find_last_bet(tokens[:i])
+
+    # No explicit action → use blind assumption
+    if hero_contrib is None:
+        if hero_pos.upper() == "SB":
+            hero_contrib = 0.5
+        elif hero_pos.upper() == "BB":
+            hero_contrib = 1.0
+        else:
+            hero_contrib = 0.0
+
     return hero_contrib
+
+
+def find_last_bet(tokens):
+    """
+    Backtrack tokens to find last bet/raise amount.
+    """
+    for j in reversed(range(len(tokens))):
+        token = tokens[j].lower()
+        if "bb" in token:
+            match = re.search(r'(\d+(\.\d+)?)', token)
+            if match:
+                return float(match.group(1))
+    return 1.0
 
 def process_csv_file(file_path):
     """
@@ -177,6 +214,16 @@ def process_csv_file(file_path):
         return call_amt / (pot_size + call_amt)
     
     df.loc[df['pot_odds_applicable'], 'pot_odds'] = df.loc[df['pot_odds_applicable']].apply(compute_row_pot_odds, axis=1)
+
+     # Compute pot odds ratio: (pot_size + call_amount) / call_amount
+    def compute_pot_odds_ratio(row):
+        call_amt = row['call_amount']
+        pot_size = row['pot_size']
+        if call_amt is None or call_amt <= 0:
+            return None
+        return f"{(pot_size + call_amt) / call_amt} : 1"
+
+    df.loc[df['pot_odds_applicable'], 'pot_odds_ratio'] = df.loc[df['pot_odds_applicable']].apply(compute_pot_odds_ratio, axis=1)
     
     # Save processed CSV
     base_name = os.path.basename(file_path)

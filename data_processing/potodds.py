@@ -117,7 +117,7 @@ def get_hero_contribution(prev_line, hero_pos):
       - Use latest occurrence of hero.
       - If it's 'bb', take amount.
       - If it's 'call', backtrack to find last bet size(last raise or BB's 1bb).
-      - If no explicit action, default SB = 0.5bb, BB = 1bb.
+      - If no explicit action, then default SB = 0.5bb, BB = 1bb.
     """
     if not prev_line or not isinstance(prev_line, str):
         return 0.5 if hero_pos.upper() == "SB" else 1.0 if hero_pos.upper() == "BB" else 0.0

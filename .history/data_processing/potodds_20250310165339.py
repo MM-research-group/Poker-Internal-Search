@@ -163,7 +163,7 @@ def process_csv_file(file_path):
     
     df['call_amount'] = df.apply(extract_call_amount, axis=1)
     
-    # pot odds = call_amount / (pot_size + call_amount)
+    # Compute pot odds where applicable: pot odds = call_amount / (pot_size + call_amount)
     def compute_row_pot_odds(row):
         call_amt = row['call_amount']
         pot_size = row['pot_size']
@@ -179,7 +179,6 @@ def process_csv_file(file_path):
     df.to_csv(output_file, index=False)
     print(f"Processed {file_path} -> {output_file}")
 
-# verified by michael
 def main():
     parser = argparse.ArgumentParser(description="Process CSV files to label pot odds eligibility and compute call amounts dynamically for preflop/postflop data.")
     parser.add_argument("input_dir", type=str, help="Directory containing CSV files")

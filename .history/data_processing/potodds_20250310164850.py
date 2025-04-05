@@ -125,7 +125,6 @@ def get_hero_contribution(prev_line, hero_pos):
                         hero_contrib += float(match.group(1))
     return hero_contrib
 
-# verified by michael
 def process_csv_file(file_path):
     """
     Process a single CSV file.
@@ -152,18 +151,20 @@ def process_csv_file(file_path):
             hero_pos = row.get('hero_position', "").strip()
             return get_call_amount_postflop(postflop_action, hero_pos)
 
-        elif is_preflop: # verified by michael
+        elif is_preflop:
+            # Use prev_line column and hero_pos (rather than hero_position)
             prev_line = row.get('prev_line', "")
-            hero_pos = row.get('hero_pos', "").strip()
+            hero_pos = row.get('hero_pos', "").strip()  # <-- Extract hero_pos for preflop
             return get_call_amount_preflop(prev_line, hero_pos, initial_stack=100.0)
 
         else:
             # If file type not determined, return None
             return None
     
+    # Apply extraction function to each row
     df['call_amount'] = df.apply(extract_call_amount, axis=1)
     
-    # pot odds = call_amount / (pot_size + call_amount)
+    # Compute pot odds where applicable: pot odds = call_amount / (pot_size + call_amount)
     def compute_row_pot_odds(row):
         call_amt = row['call_amount']
         pot_size = row['pot_size']
@@ -173,13 +174,13 @@ def process_csv_file(file_path):
     
     df.loc[df['pot_odds_applicable'], 'pot_odds'] = df.loc[df['pot_odds_applicable']].apply(compute_row_pot_odds, axis=1)
     
+    # Save processed CSV
     base_name = os.path.basename(file_path)
     name, ext = os.path.splitext(base_name)
-    output_file = os.path.join(os.path.dirname(file_path), f"withpotodds_{name}{ext}")
+    output_file = os.path.join(os.path.dirname(file_path), f"{name}_withpotodds{ext}")
     df.to_csv(output_file, index=False)
     print(f"Processed {file_path} -> {output_file}")
 
-# verified by michael
 def main():
     parser = argparse.ArgumentParser(description="Process CSV files to label pot odds eligibility and compute call amounts dynamically for preflop/postflop data.")
     parser.add_argument("input_dir", type=str, help="Directory containing CSV files")

@@ -57,16 +57,17 @@ def get_call_amount_postflop(postflop_action, hero_pos):
     if not bet_tokens:
         return None
 
+    # Get the last opponent's bet/raise
     last_token = bet_tokens[-1]
     match = re.search(r'(\d+(\.\d+)?)', last_token)
 
     if match:
         opponent_bet = float(match.group(1))
-        return max(0, opponent_bet - hero_contribution)
+        return max(0, opponent_bet - hero_contribution)  # Ensure non-negative value
 
     return None
 
-def get_call_amount_preflop(prev_line, hero_pos, initial_stack=100.0):
+def get_call_amount_preflop(prev_line, available_moves, hero_pos, initial_stack=100.0):
     """
     For a preflop dataset, extract the call amount from the prev_line string.
     
@@ -125,7 +126,6 @@ def get_hero_contribution(prev_line, hero_pos):
                         hero_contrib += float(match.group(1))
     return hero_contrib
 
-# verified by michael
 def process_csv_file(file_path):
     """
     Process a single CSV file.
@@ -137,33 +137,40 @@ def process_csv_file(file_path):
     """
     df = pd.read_csv(file_path)
     
+    # Determine file type based on filename (case-insensitive)
     filename = os.path.basename(file_path).lower()
     is_preflop = "preflop" in filename
     is_postflop = "postflop" in filename
     
+    # Label gamestates where pot odds are applicable
     df['pot_odds_applicable'] = df.apply(is_pot_odds_applicable, axis=1)
     
+    # Function to extract call amount dynamically
     def extract_call_amount(row):
         if not row['pot_odds_applicable']:
             return None
 
-        if is_postflop: # verified by michael
+        if is_postflop:
+            # Use postflop_action column and hero_position
             postflop_action = row.get('postflop_action', "")
             hero_pos = row.get('hero_position', "").strip()
             return get_call_amount_postflop(postflop_action, hero_pos)
 
-        elif is_preflop: # verified by michael
+        elif is_preflop:
+            # Use prev_line column and hero_pos (rather than hero_position)
             prev_line = row.get('prev_line', "")
-            hero_pos = row.get('hero_pos', "").strip()
-            return get_call_amount_preflop(prev_line, hero_pos, initial_stack=100.0)
+            available_moves = row.get('available_moves', "")
+            hero_pos = row.get('hero_pos', "").strip()  # <-- Extract hero_pos for preflop
+            return get_call_amount_preflop(prev_line, available_moves, hero_pos)
 
         else:
             # If file type not determined, return None
             return None
     
+    # Apply extraction function to each row
     df['call_amount'] = df.apply(extract_call_amount, axis=1)
     
-    # pot odds = call_amount / (pot_size + call_amount)
+    # Compute pot odds where applicable: pot odds = call_amount / (pot_size + call_amount)
     def compute_row_pot_odds(row):
         call_amt = row['call_amount']
         pot_size = row['pot_size']
@@ -173,13 +180,13 @@ def process_csv_file(file_path):
     
     df.loc[df['pot_odds_applicable'], 'pot_odds'] = df.loc[df['pot_odds_applicable']].apply(compute_row_pot_odds, axis=1)
     
+    # Save processed CSV
     base_name = os.path.basename(file_path)
     name, ext = os.path.splitext(base_name)
-    output_file = os.path.join(os.path.dirname(file_path), f"withpotodds_{name}{ext}")
+    output_file = os.path.join(os.path.dirname(file_path), f"{name}_withpotodds{ext}")
     df.to_csv(output_file, index=False)
     print(f"Processed {file_path} -> {output_file}")
 
-# verified by michael
 def main():
     parser = argparse.ArgumentParser(description="Process CSV files to label pot odds eligibility and compute call amounts dynamically for preflop/postflop data.")
     parser.add_argument("input_dir", type=str, help="Directory containing CSV files")

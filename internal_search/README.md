@@ -15,7 +15,7 @@
 
 4. Build and install the postflop solver:
    ```bash
-   cd postflop_solver_engine
+   cd internal_search/postflop_solver_engine
    maturin develop
    cd ..
    ```

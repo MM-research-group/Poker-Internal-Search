@@ -1,3 +1,9 @@
+"""
+Basic demo of the poker environment.
+
+to run: python internal_search/game_environment/basic_pokerenv_demo.py
+"""
+
 from texasholdem.game.game import TexasHoldEm
 from texasholdem.gui.text_gui import TextGUI
 

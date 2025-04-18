@@ -1,0 +1,4 @@
+-e ./texasholdem
+openai>=1.0.0
+python-dotenv>=1.0.0 
+maturin>=0.16.0

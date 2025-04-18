@@ -19,7 +19,7 @@ fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 echo "Script directory: $SCRIPT_DIR"
 
-ENV_NAME="poker_env"
+ENV_NAME="internal_search"
 PYTHON_VERSION="3.11"
 
 # Check if the environment already exists.

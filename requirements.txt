@@ -2,7 +2,3 @@ vllm
 openai
 together
 datasets
--e ./internal_search/texasholdem
-openai>=1.0.0
-python-dotenv>=1.0.0 
-maturin>=0.16.0

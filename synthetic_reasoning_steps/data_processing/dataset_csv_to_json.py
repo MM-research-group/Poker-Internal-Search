@@ -312,29 +312,30 @@ def poker_csv_to_json(dataset: pd.DataFrame, preflop=True):
     dataset_json = replace_keywords(dataset_json)
 
     return dataset_json
-'''
+
 if __name__ == "__main__":
-    CSV_FILENAME = "pokerbench_data/withpotodds_postflop_500k_train_set_game_scenario_information.csv"
+    CSV_FILENAME = "../pokerbench_data/withpotodds_postflop_500k_train_set_game_scenario_information.csv"
     IS_PREFLOP = False
-    JSON_FILENAME = "withpotodds_postflop_500k_train_set.json"
+    JSON_FILENAME = "../pokerbench_data/withpotodds_postflop_500k_train_set.json"
 
     dataset = pd.read_csv(CSV_FILENAME).fillna("")
     dataset_json = poker_csv_to_json(dataset, preflop=IS_PREFLOP)
     with open(JSON_FILENAME, 'w') as json_file:
         random.shuffle(dataset_json)
         json.dump(dataset_json, json_file, indent=2)
-'''
-if __name__ == "__main__":
-    CSV_FILENAME = "../pokerbench_data/withpotodds_postflop_10k_test_set_game_scenario_information.csv"
-    IS_PREFLOP = False
 
-    # Read the entire dataset
-    dataset = pd.read_csv(CSV_FILENAME).fillna("")
+# for testing
+# if __name__ == "__main__":
+#     CSV_FILENAME = "../pokerbench_data/withpotodds_postflop_10k_test_set_game_scenario_information.csv"
+#     IS_PREFLOP = False
+
+#     # Read the entire dataset
+#     dataset = pd.read_csv(CSV_FILENAME).fillna("")
     
-    # Process only the third row (index 2)
-    third_row = dataset.iloc[1:2]  # Get the third row as a DataFrame
-    dataset_json = poker_csv_to_json(third_row, preflop=IS_PREFLOP)
+#     # Process only one row 
+#     one_row = dataset.iloc[3:4]  
+#     dataset_json = poker_csv_to_json(one_row, preflop=IS_PREFLOP)
     
-    # Print the formatted output
-    print(json.dumps(dataset_json[0], indent=2))
+#     # Print the formatted output
+#     print(json.dumps(dataset_json[0], indent=2))
 

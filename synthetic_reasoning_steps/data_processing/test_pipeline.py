@@ -2,7 +2,6 @@
 
 import json
 from together import Together
-from datasets import load_dataset
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -33,11 +32,18 @@ def main():
     # Create a filesystem-friendly version of the model name (replace '/' with '_').
     safe_model_name = model_name.replace("/", "_")
     
-    # Load the PokerBench dataset and select a single datapoint.
-    ds = load_dataset("RZ412/PokerBench")
-    example = ds["train"][0]  # Use the first datapoint for testing
-
-    # Extract the game state and optimal action from the example.
+    # Load data from local JSON file
+    data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                            "pokerbench_data", 
+                            "withpotodds_postflop_500k_train_set.json")
+    
+    with open(data_path, 'r') as f:
+        data = json.load(f)
+    
+    # Get the first example from the data
+    example = data[0]
+    
+    # Extract the game state and optimal action from the example
     gamestate = example.get("instruction", "")
     optimal_action = example.get("output", "")
     

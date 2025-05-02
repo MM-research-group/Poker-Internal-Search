@@ -205,7 +205,7 @@ def process_csv_file(file_path):
         pot_size = row['pot_size']
         if call_amt is None or call_amt <= 0:
             return None
-        return call_amt / (pot_size + call_amt)
+        return round(call_amt / (pot_size + call_amt), 2)
     
     df.loc[df['pot_odds_applicable'], 'pot_odds'] = df.loc[df['pot_odds_applicable']].apply(compute_row_pot_odds, axis=1)
 
@@ -215,7 +215,8 @@ def process_csv_file(file_path):
         pot_size = row['pot_size']
         if call_amt is None or call_amt <= 0:
             return None
-        return f"{(pot_size + call_amt) / call_amt} : 1"
+        ratio = round((pot_size + call_amt) / call_amt, 2)
+        return f"{ratio} : 1"
 
     df.loc[df['pot_odds_applicable'], 'pot_odds_ratio'] = df.loc[df['pot_odds_applicable']].apply(compute_pot_odds_ratio, axis=1)
     

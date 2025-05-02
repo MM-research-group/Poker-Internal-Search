@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from generate_reasoning_prompts import (
     prompt_proposer,
-    prompt_math_board_verifier,
+    prompt_board_verifier,
     prompt_range_estimation_verifier,
     prompt_meta_verifier,
 )
@@ -71,20 +71,20 @@ def main():
         json.dump(proposer_output, f, indent=4)
     
     # -----------------------------
-    # Step 2: Math & Board Analysis Verifier
+    # Step 2: Board Analysis Verifier
     # -----------------------------
-    math_board_prompt = prompt_math_board_verifier(gamestate, optimal_action, proposed_reasoning)
-    math_board_response = call_model(math_board_prompt, model=model_name)
+    board_prompt = prompt_board_verifier(gamestate, optimal_action, proposed_reasoning)
+    board_response = call_model(board_prompt, model=model_name)
     
-    math_board_output = {
-        "raw_response": math_board_response,
+    board_output = {
+        "raw_response": board_response,
         "gamestate": gamestate,
         "optimal_action": optimal_action
     }
     
-    # Save the math and board analysis verifier output.
-    with open(os.path.join(model_results_dir, "math_board_output.json"), "w") as f:
-        json.dump(math_board_output, f, indent=4)
+    # Save the board analysis verifier output.
+    with open(os.path.join(model_results_dir, "board_output.json"), "w") as f:
+        json.dump(board_output, f, indent=4)
     
     # -----------------------------
     # Step 3: Opponent Range Estimation Verifier
@@ -109,7 +109,7 @@ def main():
         gamestate,
         optimal_action,
         proposed_reasoning,
-        math_board_response,      # pass the raw math & board response
+        board_response,      # pass the raw board response
         range_estimation_response  # pass the raw opponent range response
     )
     meta_response = call_model(meta_prompt, model=model_name)

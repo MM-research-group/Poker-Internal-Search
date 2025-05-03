@@ -5,7 +5,7 @@
 # it checks if potodds are applicable (aka does "call" exist in available_moves column?). 
 # if yes, it calculates the pot odds for that gamestate and saves it.
 
-# how to run the script: python data_processing/potodds.py /path/to/csv_directory
+# how to run the script: python synthetic_reasoning_steps/data_processing/potodds.py /home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data
 
 import pandas as pd
 import ast

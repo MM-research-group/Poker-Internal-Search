@@ -1,0 +1,75 @@
+<search>
+  <node id="root" street="flop" pot="100" effective_stack="900">
+    <hero_hand>AsKs</hero_hand>
+    <board>Ts7h2d</board>
+    <range>AK-suited (12.3%), AA (10.2%), TX (32.5%), 77 (8.1%), flush draws (18.4%), other (18.5%)</range>
+    <legal_actions>
+      <legal_action type="bet" size="small" amount="33" ev="5.8"/>
+      <legal_action type="check" ev="5.2"/>
+      <legal_action type="bet" size="medium" amount="67" ev="5.5"/>
+      <legal_action type="bet" size="large" amount="100" ev="4.9"/>
+      <legal_action type="bet" size="overbet" amount="150" ev="4.2"/>
+    </legal_actions>
+    <actions>
+      <!-- List top 3 actions by EV but only fully expand the highest one -->
+      <action id="a1" type="bet" size="1/3_pot" amount="33" ev="5.8" best="true">
+        <opponent_action type="call" probability="0.65" ev="6.3">
+          <turn card="Qh" probability="0.27">
+            <node id="a1-1" street="turn" pot="166" effective_stack="867">
+              <hero_hand>AsKs</hero_hand>
+              <board>Ts7h2d Qh</board>
+              <range>Top pairs (30%), overpairs (15%), draws (25%), air (30%)</range>
+              <legal_actions>
+                <legal_action type="check" ev="7.6"/>
+                <legal_action type="bet" size="small" amount="55" ev="8.2"/>
+                <legal_action type="bet" size="medium" amount="110" ev="8.2"/>
+                <legal_action type="bet" size="large" amount="166" ev="7.8"/>
+              </legal_actions>
+              <actions>
+                <!-- List top 3 actions by EV but only fully expand the highest one -->
+                <action id="a1-1" type="bet" size="2/3_pot" amount="110" ev="8.2" best="true">
+                  <opponent_action type="call" probability="0.7" ev="9.1">
+                    <river card="4c" probability="0.33">
+                      <node id="a1-1-1" street="river" pot="386" effective_stack="757">
+                        <hero_hand>AsKs</hero_hand>
+                        <board>Ts7h2d Qh 4c</board>
+                        <range>Top pairs (35%), two pairs (10%), sets (5%), missed draws (50%)</range>
+                        <legal_actions>
+                          <legal_action type="check" ev="9.5"/>
+                          <legal_action type="bet" size="small" amount="129" ev="8.7"/>
+                          <legal_action type="bet" size="medium" amount="257" ev="8.2"/>
+                        </legal_actions>
+                        <actions>
+                          <!-- List top 3 actions by EV but only fully expand the highest one -->
+                          <action id="a1-1-1" type="check" ev="9.5" best="true">
+                            <opponent_action type="bet" size="1/2_pot" amount="150" probability="0.4" ev="10.2">
+                              <action id="a1-1-1-1" type="call" ev="11.3" best="true">
+                                <result>Win: +300 chips with top pair top kicker vs second pair</result>
+                              </action>
+                            </opponent_action>
+                          </action>
+                        </actions>
+                      </node>
+                    </river>
+                  </opponent_action>
+                </action>
+                
+                <action id="a1-2" type="check" ev="7.6">
+                  <!-- Not expanded since it's not the highest EV action -->
+                </action>
+              </actions>
+            </node>
+          </turn>
+        </opponent_action>
+      </action>
+      
+      <action id="a2" type="check" ev="5.2">
+        <!-- Not expanded since it's not the highest EV action -->
+      </action>
+      
+      <action id="a3" type="bet" size="2/3_pot" amount="67" ev="5.5">
+        <!-- Not expanded since it's not the highest EV action -->
+      </action>
+    </actions>
+  </node>
+</search>

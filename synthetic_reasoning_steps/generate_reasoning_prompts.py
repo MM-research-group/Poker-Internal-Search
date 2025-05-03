@@ -8,14 +8,14 @@ You are a professional poker player known for your deep strategic insight in 6-p
 - Given the opponent's range, what can we do about it?
 - Risk management, pot odds, stack sizes (when necessary)
 - Future street considerations and board texture
-- Given all of your considerations, determine the relative importance of each factor and use the most important factors to determine the optimal action.
+- Given all of your considerations, determine the relative importance of each factor and use those to help justify the optimal action.
 
 Only use factors that make sense given the current game state. Break down your reasoning step by step, ensuring that each part logically follows from the game state. Assume your opponent is playing optimally.
 
 Game State: {gamestate}
 Optimal Action: {optimal_action}
 
-Please provide your chain-of-thought explanation along with a brief summary of the main points.
+Please provide your chain-of-thought analysis for why the optimal action is the best choice, supporting your reasoning with the factors you considered.
     """.format(gamestate=gamestate, optimal_action=optimal_action)
     return prompt
 

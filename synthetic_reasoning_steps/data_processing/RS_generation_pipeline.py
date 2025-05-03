@@ -6,9 +6,13 @@ Usage:
 '''
 
 import json
-from together import Together
+from openai import OpenAI
 import sys
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from generate_reasoning_prompts import (
@@ -18,24 +22,45 @@ from generate_reasoning_prompts import (
     prompt_meta_verifier,
 )
 
-client = Together()
+# Initialize DeepSeek client
+client = OpenAI(
+    api_key=os.environ.get("DEEPSEEK_API_KEY"),
+    base_url="https://api.deepseek.com"
+)
 
-def call_model(prompt_text, role="user", model="deepseek-ai/DeepSeek-R1"):
+def call_model(prompt_text, role="user", model="deepseek-reasoner"):
     """
-    Calls the Together API with the given prompt and returns the model response as a string.
+    Calls the DeepSeek API with the given prompt and returns the model response as a string.
     This function expects the prompt to be provided as a string.
+    
+    For DeepSeek models, we can access both reasoning content and final content.
     """
-
+    # Create messages in the format expected by DeepSeek
+    messages = [{"role": role, "content": prompt_text}]
+    
+    # Make the API call with a safe max_tokens value
+    # We estimate conservatively to avoid token limit errors
     completion = client.chat.completions.create(
         model=model,
-        messages=[{"role": role, "content": prompt_text}]
+        messages=messages,
+        max_tokens=4000  # Conservative default that should work for most prompts
     )
-    return completion.choices[0].message.content
+    
+    # For models with reasoning capability, we can access both
+    try:
+        # Try to get reasoning content (chain-of-thought)
+        reasoning_content = completion.choices[0].message.reasoning_content
+        content = completion.choices[0].message.content
+        # Return both reasoning content and final content
+        return reasoning_content, content
+    except AttributeError:
+        # If the model doesn't support reasoning_content, just return the regular content
+        return None, completion.choices[0].message.content
 
 def main():
     # Define the models to use.
-    regular_model_name = "deepseek-ai/DeepSeek-R1"
-    meta_model_name = "deepseek-ai/DeepSeek-R1"
+    regular_model_name = "deepseek-reasoner"
+    meta_model_name = "deepseek-reasoner"
     
     # Load data from local JSON file
     data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
@@ -57,10 +82,14 @@ def main():
     if not os.path.exists(base_results_dir):
         os.makedirs(base_results_dir)
     
-    if "/" in meta_model_name:
+    
+    if meta_model_name == "deepseek-reasoner":
+        safe_model_name = "DeepSeek-R1"  
+    elif "/" in meta_model_name:
         safe_model_name = meta_model_name.split("/")[-1]
     else:
         safe_model_name = meta_model_name
+        
     model_results_dir = os.path.join(base_results_dir, safe_model_name)
     if not os.path.exists(model_results_dir):
         os.makedirs(model_results_dir)
@@ -69,16 +98,17 @@ def main():
     # Step 1: Proposer Module
     # -----------------------------
     proposer_prompt = prompt_proposer(gamestate, optimal_action)
-    proposer_response = call_model(proposer_prompt, model=regular_model_name)
+    proposer_reasoning, proposer_content = call_model(proposer_prompt, model=regular_model_name)
     
     # Instead of parsing JSON, we simply save the raw string response.
     proposer_output = {
-        "raw_response": proposer_response,
+        "reasoning_content": proposer_reasoning,
+        "final_response": proposer_content,
         "gamestate": gamestate,
         "optimal_action": optimal_action
     }
-    # We'll use the raw response as the proposed reasoning.
-    proposed_reasoning = proposer_response
+    # We'll use the final response as the proposed reasoning.
+    proposed_reasoning = proposer_content
     
     # Save the proposer output.
     with open(os.path.join(model_results_dir, "proposer_output.json"), "w") as f:
@@ -88,11 +118,12 @@ def main():
     # Step 2: Board Analysis Verifier
     # -----------------------------
     board_prompt = prompt_board_verifier(gamestate, optimal_action, proposed_reasoning)
-    board_response = call_model(board_prompt, model=regular_model_name)
-    print(board_response)
+    board_reasoning, board_content = call_model(board_prompt, model=regular_model_name)
+    print(board_reasoning)
     
     board_output = {
-        "raw_response": board_response,
+        "reasoning_content": board_reasoning,
+        "final_response": board_content,
         "gamestate": gamestate,
         "optimal_action": optimal_action
     }
@@ -105,10 +136,11 @@ def main():
     # Step 3: Opponent Range Estimation Verifier
     # -----------------------------
     range_estimation_prompt = prompt_range_estimation_verifier(gamestate, optimal_action, proposed_reasoning)
-    range_estimation_response = call_model(range_estimation_prompt, model=regular_model_name)
+    range_reasoning, range_content = call_model(range_estimation_prompt, model=regular_model_name)
     
     range_estimation_output = {
-        "raw_response": range_estimation_response,
+        "reasoning_content": range_reasoning,
+        "final_response": range_content,
         "gamestate": gamestate,
         "optimal_action": optimal_action
     }
@@ -124,13 +156,14 @@ def main():
         gamestate,
         optimal_action,
         proposed_reasoning,
-        board_response,      # pass the raw board response
-        range_estimation_response  # pass the raw opponent range response
+        board_content,
+        range_content
     )
-    meta_response = call_model(meta_prompt, model=meta_model_name)
+    meta_reasoning, meta_content = call_model(meta_prompt, model=meta_model_name)
     
     meta_output = {
-        "raw_response": meta_response,
+        "reasoning_content": meta_reasoning,
+        "final_response": meta_content,
         "gamestate": gamestate,
         "optimal_action": optimal_action
     }

@@ -18,35 +18,6 @@ Please provide your chain-of-thought explanation along with a brief summary of t
     """.format(gamestate=gamestate, optimal_action=optimal_action)
     return prompt
 
-
-def prompt_math_board_verifier(gamestate, optimal_action, proposed_reasoning):
-    prompt = """
-You are a dedicated expert in verifying mathematical reasoning and board analysis in poker scenarios.
-Below is the chain-of-thought reasoning corresponding to the provided game state. This reasoning should include both mathematical computations and board analysis. (If one or both are missing, please note that explicitly in your response.)
-
-Your tasks are to verify the following areas within the reasoning:
-
-Mathematical Verification:
-- Identify every instance where mathematical computations or numerical reasoning is applied (e.g., probability calculations, pot odds, percentage computations).
-- Verify that all arithmetic is correct and that probability or risk assessments follow standard poker math.
-- Flag and explain any miscalculations or inconsistencies.
-
-Board Analysis Verification:
-- Review all sections where the board is analyzed (e.g., card counts, suit distributions, potential flushes, straight draws, or other spatial/card pattern considerations).
-- Ensure that the board description (e.g., number of spades, hearts, etc.) is consistent with the actual game state.
-- Detect and annotate any misinterpretations or hallucinations (such as assuming extra cards or misidentifying a flush).
-
-Output Requirements:
-- Provide a revised version of the math and board analysis sections with corrections applied.
-- Include a brief summary of the changes you made.
-- If any relevant analysis sections (mathematical computations or board analysis) are missing that you think would be beneficial, please mention it in your report.
-
-Game State: {gamestate}
-Optimal Action: {optimal_action}
-Proposed Reasoning: {proposed_reasoning}
-    """.format(gamestate=gamestate, optimal_action=optimal_action, proposed_reasoning=proposed_reasoning)
-    return prompt
-
 def prompt_range_estimation_verifier(gamestate, optimal_action, proposed_reasoning):
     prompt = """
 You are an expert in opponent range estimation in poker scenarios. Your task is to evaluate the portion of the chain-of-thought reasoning below that discusses the opponent's potential holdings based on the provided game state and betting actions.
@@ -71,11 +42,11 @@ Proposed Reasoning: {proposed_reasoning}
     return prompt
 
 
-def prompt_meta_verifier(gamestate, optimal_action, proposed_reasoning, math_board_output, range_estimation_output):
+def prompt_meta_verifier(gamestate, optimal_action, proposed_reasoning, board_output, range_estimation_output):
     prompt = """
 You are an expert poker strategist tasked with a comprehensive review of the chain-of-thought explanation for a poker scenario. In this review, you have access to multiple sources:
 1. The original proposed chain-of-thought explanation.
-2. The revised math and board analysis output (see below).
+2. The revised board analysis output (see below).
 3. The revised opponent range estimation output (see below).
 
 Your objectives are:
@@ -84,9 +55,9 @@ Evaluate Revisions:
 - Determine if the corrections make sense, if there are any.
 
 Overall Coherence and Accuracy:
-- Integrate the corrections from the math/board analysis and opponent range estimation outputs into a final chain-of-thought explanation.
+- Integrate the corrections from the board analysis and opponent range estimation outputs into a final chain-of-thought explanation.
 - Ensure that every part of the final explanation is logically consistent and factually correct according to standard poker strategy.
-- Verify that all mathematical computations, board analyses, and opponent range analyses are valid and coherently merged.
+- Verify that all board analyses, and opponent range analyses are valid and coherently merged. Make sure you're weighing all of the considerations for range analysis and determining which ones are the most important.
 
 Hallucination and Inconsistency Detection:
 - If you see any remaining hallucinations, misrepresentations, or logical inconsistencies in the combined explanation, please fix it.
@@ -103,8 +74,8 @@ Game State: {gamestate}
 Optimal Action: {optimal_action}
 Original Proposed Reasoning: {proposed_reasoning}
 
-Math and Board Analysis Revision:
-{math_board_output}
+Board Analysis Revision:
+{board_output}
 
 Opponent Range Estimation Revision:
 {range_estimation_output}
@@ -114,7 +85,7 @@ Please proceed step by step in your verification.
         gamestate=gamestate,
         optimal_action=optimal_action,
         proposed_reasoning=proposed_reasoning,
-        math_board_output=math_board_output,
+        board_output=board_output,
         range_estimation_output=range_estimation_output
     )
     return prompt

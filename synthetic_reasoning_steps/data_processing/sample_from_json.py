@@ -6,6 +6,8 @@ import os
 '''
 Usage:
     python synthetic_reasoning_steps/data_processing/sample_from_json.py /home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data/withpotodds_postflop_500k_train_set.json --output_file /home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data/withpotodds_postflop_60k_sampled.json --seed 42
+
+    python synthetic_reasoning_steps/data_processing/sample_from_json.py /home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data/withpotodds_postflop_500k_train_set.json --output_file /home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data/sample_of_3_postflop.json --seed 42 --sample_size 3    
 '''
 
 def sample_json_data(input_file, output_file, sample_size=60000):

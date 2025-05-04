@@ -2,7 +2,9 @@
 
 '''
 Usage:
-    python synthetic_reasoning_steps/data_processing/RS_generation_pipeline.py
+    python synthetic_reasoning_steps/data_processing/RS_generation_pipeline.py\
+        [input_file_path]\
+        [--batch_size BATCH_SIZE]
 '''
 
 import json
@@ -18,6 +20,7 @@ import random
 import glob
 import shutil
 import datetime
+import argparse
 
 load_dotenv()
 
@@ -328,8 +331,20 @@ def main(data_path, batch_size=3):
     print("=================================================")
 
 if __name__ == "__main__":
-    data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                            "pokerbench_data/15k_samples", 
-                            "sample_first_15k_postflop_chunk.json")
-    # Adjust batch size based on your API rate limits and system capabilities
-    main(data_path, batch_size=100)
+    parser = argparse.ArgumentParser(description="Poker reasoning step generation pipeline")
+    parser.add_argument("input_file", nargs="?", 
+                        help="Path to the input dataset JSON file")
+    parser.add_argument("--batch_size", type=int, default=100,
+                        help="Batch size for processing examples (default: 100)")
+    args = parser.parse_args()
+    
+    # Use provided input file or default to the sample file
+    if args.input_file:
+        data_path = args.input_file
+    else:
+        data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                "pokerbench_data/15k_samples", 
+                                "sample_first_15k_postflop_chunk.json")
+        print(f"No input file specified, using default: {data_path}")
+    
+    main(data_path, batch_size=args.batch_size)

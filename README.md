@@ -1,6 +1,6 @@
 # Poker-Internal-Search
 
-Repo dedicated to replicating MCTS-like search in-context for the downstream task of poker.
+Repo dedicated to replicating MCTS-like search in-context for the imperfect-information environment that is poker (6-handed Texas Hold'em).
 
 
 For Internal Search, run the following:

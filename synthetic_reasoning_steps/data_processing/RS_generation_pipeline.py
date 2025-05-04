@@ -5,6 +5,11 @@ Usage:
     python synthetic_reasoning_steps/data_processing/RS_generation_pipeline.py\
         [input_file_path]\
         [--batch_size BATCH_SIZE]
+
+Example:
+    python synthetic_reasoning_steps/data_processing/RS_generation_pipeline.py\
+        /home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data/15k_samples/sample_first_15k_postflop_chunk.json\
+        --batch_size 100
 '''
 
 import json
@@ -332,19 +337,10 @@ def main(data_path, batch_size=3):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Poker reasoning step generation pipeline")
-    parser.add_argument("input_file", nargs="?", 
+    parser.add_argument("input_file", 
                         help="Path to the input dataset JSON file")
     parser.add_argument("--batch_size", type=int, default=100,
                         help="Batch size for processing examples (default: 100)")
     args = parser.parse_args()
     
-    # Use provided input file or default to the sample file
-    if args.input_file:
-        data_path = args.input_file
-    else:
-        data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                "pokerbench_data/15k_samples", 
-                                "sample_first_15k_postflop_chunk.json")
-        print(f"No input file specified, using default: {data_path}")
-    
-    main(data_path, batch_size=args.batch_size)
+    main(args.input_file, batch_size=args.batch_size)

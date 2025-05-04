@@ -213,6 +213,58 @@ def find_last_processed_index(checkpoints_dir):
     
     return last_processed
 
+def find_missing_batches(checkpoints_dir, batch_size, total_examples):
+    """
+    Find missing batches that need to be processed.
+    
+    Args:
+        checkpoints_dir: Directory containing checkpoint files
+        batch_size: Size of each batch
+        total_examples: Total number of examples in the dataset
+        
+    Returns:
+        List of tuples (batch_start, batch_end) for missing batches
+    """
+    checkpoint_files = glob.glob(os.path.join(checkpoints_dir, "checkpoint_*.json"))
+    processed_batches = set()
+    
+    for checkpoint_file in checkpoint_files:
+        try:
+            # Extract batch information from filename
+            filename = os.path.basename(checkpoint_file)
+            parts = filename.replace("checkpoint_", "").replace(".json", "").split("-")
+            
+            if len(parts) >= 2:
+                batch_start = int(parts[0])
+                batch_end = int(parts[1])
+                
+                # Verify the file is not empty or corrupted
+                file_size = os.path.getsize(checkpoint_file)
+                if file_size > 10:  # Simple check to avoid empty files (needs at least "{}" and some content)
+                    try:
+                        with open(checkpoint_file, 'r') as f:
+                            content = json.load(f)
+                            if content:  # Check if content is not empty
+                                processed_batches.add((batch_start, batch_end))
+                    except:
+                        # Skip files with JSON parsing errors
+                        print(f"⚠️ Warning: Checkpoint file {checkpoint_file} is corrupted and will be reprocessed")
+                else:
+                    print(f"⚠️ Warning: Checkpoint file {checkpoint_file} is empty and will be reprocessed")
+        except (ValueError, IndexError):
+            continue
+    
+    # Calculate all expected batches
+    expected_batches = []
+    for batch_start in range(0, total_examples, batch_size):
+        batch_end = min(batch_start + batch_size, total_examples)
+        expected_batches.append((batch_start, batch_end))
+    
+    # Find missing batches
+    missing_batches = [batch for batch in expected_batches if batch not in processed_batches]
+    
+    return missing_batches
+
 def backup_existing_results(results_file_path):
     """Create a backup of the existing results file if it exists"""
     if os.path.exists(results_file_path):
@@ -265,8 +317,65 @@ def main(data_path, batch_size=3):
     # Create a backup of existing results file if it exists
     backup_existing_results(results_file_path)
     
+    # Identify missing batches that need to be processed
+    missing_batches = find_missing_batches(checkpoints_dir, batch_size, len(data))
+    
     # Find the last processed index from checkpoint files
-    starting_index = find_last_processed_index(checkpoints_dir)
+    last_processed_index = find_last_processed_index(checkpoints_dir)
+    
+    if missing_batches:
+        print(f"Found {len(missing_batches)} missing or incomplete checkpoint batches that need to be processed")
+        print(f"The highest processed index is: {last_processed_index}")
+        
+        # Process missing batches first
+        print("\n=== Processing missing batches ===")
+        for batch_start, batch_end in sorted(missing_batches):
+            batch = data[batch_start:batch_end]
+            checkpoint_file = os.path.join(checkpoints_dir, f"checkpoint_{batch_start}-{batch_end}.json")
+            
+            print(f"\n--- Processing missing batch, examples {batch_start+1}-{batch_end}/{len(data)} ---")
+            
+            batch_start_time = time.time()
+            
+            # Process batch in parallel
+            batch_results = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=batch_size) as executor:
+                # Create a dictionary to keep track of futures and their corresponding indices
+                future_to_index = {
+                    executor.submit(process_example, example, regular_model_name, meta_model_name): i 
+                    for i, example in enumerate(batch)
+                }
+                
+                # Process as futures complete
+                for future in concurrent.futures.as_completed(future_to_index):
+                    idx = future_to_index[future]
+                    try:
+                        result = future.result()
+                        if result:
+                            batch_results.append(result)
+                            print(f"✓ Completed example {batch_start + idx + 1}/{len(data)}")
+                    except Exception as exc:
+                        print(f"Example {batch_start + idx + 1} generated an exception: {exc}")
+            
+            # Save batch results to checkpoint file
+            with open(checkpoint_file, "w") as f:
+                json.dump(batch_results, f, indent=4)
+            
+            batch_end_time = time.time()
+            calculate_and_report_batch_time(
+                batch_start_time, 
+                batch_end_time, 
+                len(batch),
+                batch_end, 
+                len(data)
+            )
+        
+        print("\n=== Finished processing missing batches ===")
+        
+        # Update the last processed index after filling in missing batches
+        last_processed_index = find_last_processed_index(checkpoints_dir)
+    
+    starting_index = last_processed_index
     
     if starting_index > 0:
         print(f"Found checkpoints up to example {starting_index}")
@@ -279,6 +388,7 @@ def main(data_path, batch_size=3):
     print(f"Using batch size: {batch_size}")
     print(f"Checkpoints will be stored in: {checkpoints_dir}")
     
+    # Continue with regular processing from the last index
     for batch_start in range(starting_index, len(data), batch_size):
         batch_end = min(batch_start + batch_size, len(data))
         batch = data[batch_start:batch_end]

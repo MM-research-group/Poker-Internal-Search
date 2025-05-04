@@ -25,26 +25,33 @@ from generate_reasoning_prompts import (
     prompt_board_and_range_verifier,
     prompt_meta_verifier,
 )
+from api_key_manager import ApiKeyManager
 
-# Initialize Gemini client
-api_key = os.environ.get("GEMINI_API_KEY")
-genai_client = genai.Client(api_key=api_key)
+# Initialize API key manager instead of a single key
+key_manager = ApiKeyManager()
+genai_client = key_manager.get_client()
 
-def call_model(prompt_text, role="user", model="gemini-2.5-pro-preview-03-25", max_retries=5, initial_backoff=10):
+def call_model(prompt_text, role="user", model="gemini-2.5-flash-preview-04-17", max_retries=5, initial_backoff=10):
     """
     Calls the Google Gemini API with the given prompt and returns the model response as a string.
-    Implements exponential backoff for handling rate limit errors.
+    Implements key rotation and exponential backoff for handling rate limit errors.
     
     Args:
         prompt_text: The prompt to send to the model
         role: Not used for Gemini but kept for compatibility
-        model: The model to use (e.g., "gemini-2.5-pro-preview-03-25")
+        model: The model to use (e.g., "gemini-2.5-flash-preview-04-17")
         max_retries: Maximum number of retry attempts
         initial_backoff: Initial backoff time in seconds
         
     Returns:
         String: The model's response text
     """
+    global genai_client
+    
+    # Track if we've tried all keys
+    keys_tried = 0
+    total_keys = len(key_manager.keys)
+    
     for attempt in range(max_retries + 1):  # +1 for the initial attempt
         try:
             # Send the prompt to Gemini using the updated API
@@ -58,13 +65,23 @@ def call_model(prompt_text, role="user", model="gemini-2.5-pro-preview-03-25", m
                 
         except Exception as e:
             # Check if it's a rate limit error 
-            # (Gemini rate limit errors might have different indicators than "429")
             if "rate limit" in str(e).lower() or "quota" in str(e).lower():
+                # Try rotating to a new key first
+                if keys_tried < total_keys:
+                    key_manager.rotate_key()
+                    genai_client = key_manager.get_client()
+                    keys_tried += 1
+                    print(f"⚠️ Rate limit reached. Rotating to API key {key_manager.current_index + 1}/{total_keys}")
+                    continue
+                
+                # If we've tried all keys and they're all rate-limited, then backoff
                 if attempt < max_retries:
                     # Calculate backoff time with exponential increase and some randomness
                     backoff_time = initial_backoff * (2 ** attempt) * (0.5 + 0.5 * random.random())
-                    print(f"⚠️ Rate limit reached. Retrying in {backoff_time:.1f} seconds... (Attempt {attempt+1}/{max_retries})")
+                    print(f"⚠️ All keys rate limited. Retrying in {backoff_time:.1f} seconds... (Attempt {attempt+1}/{max_retries})")
                     time.sleep(backoff_time)
+                    # Reset key rotation count since we've waited
+                    keys_tried = 0
                     continue
                 else:
                     print(f"❌ Maximum retries reached. Rate limit error: {e}")
@@ -156,8 +173,8 @@ def calculate_and_report_batch_time(start_time, end_time, batch_size, current_co
         print(f"  Estimated time remaining: {int(hours)}h {int(minutes)}m {int(seconds)}s")
 
 def main(data_path, batch_size=3):
-    regular_model_name = "gemini-2.5-pro-preview-03-25"
-    meta_model_name = "gemini-2.5-pro-preview-03-25"
+    regular_model_name = "gemini-2.5-flash-preview-04-17"
+    meta_model_name = "gemini-2.5-flash-preview-04-17"
     
     print(f"Loading data from: {data_path}")
     with open(data_path, 'r') as f:
@@ -257,4 +274,4 @@ if __name__ == "__main__":
                             "pokerbench_data", 
                             "withpotodds_postflop_60k_sampled.json")
     # Adjust batch size based on your API rate limits and system capabilities
-    main(data_path, batch_size=1000)
+    main(data_path, batch_size=500)

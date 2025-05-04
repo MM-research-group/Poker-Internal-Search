@@ -6,7 +6,7 @@ Usage:
 '''
 
 import json
-from openai import OpenAI
+from google import genai
 import sys
 import os
 from dotenv import load_dotenv
@@ -14,6 +14,7 @@ import concurrent.futures
 from tqdm import tqdm
 import time
 from typing import List, Dict, Any, Tuple
+import random
 
 load_dotenv()
 
@@ -21,108 +22,118 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from generate_reasoning_prompts import (
     prompt_proposer,
-    prompt_board_verifier,
-    prompt_range_estimation_verifier,
+    prompt_board_and_range_verifier,
     prompt_meta_verifier,
 )
 
-client = OpenAI(
-    api_key=os.environ.get("DEEPSEEK_API_KEY"),
-    base_url="https://api.deepseek.com"
-)
+# Initialize Gemini client
+api_key = os.environ.get("GEMINI_API_KEY")
+genai_client = genai.Client(api_key=api_key)
 
-def call_model(prompt_text, role="user", model="deepseek-reasoner"):
+def call_model(prompt_text, role="user", model="gemini-2.5-pro-preview-03-25", max_retries=5, initial_backoff=10):
     """
-    Calls the DeepSeek API with the given prompt and returns the model response as a string.
-    This function expects the prompt to be provided as a string.
+    Calls the Google Gemini API with the given prompt and returns the model response as a string.
+    Implements exponential backoff for handling rate limit errors.
     
-    For DeepSeek models, we can access both reasoning content and final content.
+    Args:
+        prompt_text: The prompt to send to the model
+        role: Not used for Gemini but kept for compatibility
+        model: The model to use (e.g., "gemini-2.5-pro-preview-03-25")
+        max_retries: Maximum number of retry attempts
+        initial_backoff: Initial backoff time in seconds
+        
+    Returns:
+        String: The model's response text
     """
-    messages = [{"role": role, "content": prompt_text}]
+    for attempt in range(max_retries + 1):  # +1 for the initial attempt
+        try:
+            # Send the prompt to Gemini using the updated API
+            response = genai_client.models.generate_content(
+                model=model,
+                contents=prompt_text
+            )
+            
+            # Return just the text content
+            return response.text
+                
+        except Exception as e:
+            # Check if it's a rate limit error 
+            # (Gemini rate limit errors might have different indicators than "429")
+            if "rate limit" in str(e).lower() or "quota" in str(e).lower():
+                if attempt < max_retries:
+                    # Calculate backoff time with exponential increase and some randomness
+                    backoff_time = initial_backoff * (2 ** attempt) * (0.5 + 0.5 * random.random())
+                    print(f"⚠️ Rate limit reached. Retrying in {backoff_time:.1f} seconds... (Attempt {attempt+1}/{max_retries})")
+                    time.sleep(backoff_time)
+                    continue
+                else:
+                    print(f"❌ Maximum retries reached. Rate limit error: {e}")
+            
+            # For other errors, or if we've exceeded max retries
+            raise e
     
-    completion = client.chat.completions.create(
-        model=model,
-        messages=messages,
-        max_tokens=4000  # Conservative default
-    )
-    
-    try:
-        reasoning_content = completion.choices[0].message.reasoning_content
-        content = completion.choices[0].message.content
-        return reasoning_content, content
-    except AttributeError:
-        return None, completion.choices[0].message.content
+    # This point should never be reached due to the raise above, but just in case:
+    raise Exception("Maximum retries exceeded with no successful response")
 
-def call_model_async(prompt_text, role="user", model="deepseek-reasoner"):
-    """Async version of call_model for parallel processing"""
-    return call_model(prompt_text, role, model)
-
-def process_example(example, regular_model_name, meta_model_name):
-    """Process a single example through all four steps"""
+def process_example(example, regular_model_name, meta_model_name, max_retries=5):
+    """Process a single example through all four steps with retry logic"""
     try:
         gamestate = example.get("instruction", "")
         optimal_action = example.get("output", "")
         
-        example_results = {}
+        example_results = {
+            "gamestate": gamestate,
+            "optimal_action": optimal_action
+        }
         
         # Step 1: Proposer Module (must be done first)
         print(f"  Running Proposer Module...")
         proposer_prompt = prompt_proposer(gamestate, optimal_action)
-        proposer_reasoning, proposer_content = call_model(proposer_prompt, model=regular_model_name)
         
-        example_results["proposer_output"] = {
-            "reasoning_content": proposer_reasoning,
-            "final_response": proposer_content,
-            "gamestate": gamestate,
-            "optimal_action": optimal_action
-        }
+        try:
+            proposer_content = call_model(proposer_prompt, model=regular_model_name, max_retries=max_retries)
+        except Exception as e:
+            print(f"  ❌ Proposer module failed: {e}")
+            return None
+        
+        print(f"  ✓ Proposer complete")
+        
+        example_results["proposer_response"] = proposer_content
         proposed_reasoning = proposer_content
         
-        # Steps 2 & 3: Run Board Analysis and Range Estimation in parallel
-        print(f"  Running Board Analysis & Range Estimation in parallel...")
+        # Step 2: Combined Board Analysis and Range Estimation
+        print(f"  Running Combined Board Analysis & Range Estimation...")
         
-        # parallel execution
-        board_prompt = prompt_board_verifier(gamestate, optimal_action, proposed_reasoning)
-        range_estimation_prompt = prompt_range_estimation_verifier(gamestate, optimal_action, proposed_reasoning)
+        board_range_prompt = prompt_board_and_range_verifier(gamestate, optimal_action, proposed_reasoning)
         
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            board_future = executor.submit(call_model_async, board_prompt, "user", regular_model_name)
-            range_future = executor.submit(call_model_async, range_estimation_prompt, "user", regular_model_name)
+        try:
+            board_range_content = call_model(board_range_prompt, model=regular_model_name, max_retries=max_retries)
+            print(f"  ✓ Combined Board Analysis & Range Estimation complete")
+        except Exception as e:
+            print(f"  ❌ Combined Board & Range module failed: {e}")
+            return None
             
-            board_reasoning, board_content = board_future.result()
-            range_reasoning, range_content = range_future.result()
+        # Store the combined output
+        example_results["board_range_response"] = board_range_content
         
-        example_results["board_output"] = {
-            "reasoning_content": board_reasoning,
-            "final_response": board_content,
-            "gamestate": gamestate,
-            "optimal_action": optimal_action
-        }
-        
-        example_results["range_estimation_output"] = {
-            "reasoning_content": range_reasoning,
-            "final_response": range_content,
-            "gamestate": gamestate,
-            "optimal_action": optimal_action
-        }
-        
-        # Step 4: Meta Verifier Module (must be done after steps 2 & 3)
+        # Step 3: Meta Verifier Module
         print(f"  Running Meta Verifier Module...")
         meta_prompt = prompt_meta_verifier(
             gamestate,
             optimal_action,
             proposed_reasoning,
-            board_content,
-            range_content
+            board_range_content,
         )
-        meta_reasoning, meta_content = call_model(meta_prompt, model=meta_model_name)
         
-        example_results["meta_output"] = {
-            "reasoning_content": meta_reasoning,
-            "final_response": meta_content,
-            "gamestate": gamestate,
-            "optimal_action": optimal_action
-        }
+        try:
+            meta_content = call_model(meta_prompt, model=meta_model_name, max_retries=max_retries)
+            print(f"  ✓ Meta Verification complete")
+        except Exception as e:
+            print(f"  ❌ Meta Verifier module failed: {e}")
+            # Still save partial results with error message
+            meta_content = f"Error: {str(e)}"
+        
+        example_results["meta_response"] = meta_content
         
         return example_results
     
@@ -145,8 +156,8 @@ def calculate_and_report_batch_time(start_time, end_time, batch_size, current_co
         print(f"  Estimated time remaining: {int(hours)}h {int(minutes)}m {int(seconds)}s")
 
 def main(data_path, batch_size=3):
-    regular_model_name = "deepseek-reasoner"
-    meta_model_name = "deepseek-reasoner"
+    regular_model_name = "gemini-2.5-pro-preview-03-25"
+    meta_model_name = "gemini-2.5-pro-preview-03-25"
     
     print(f"Loading data from: {data_path}")
     with open(data_path, 'r') as f:
@@ -156,9 +167,7 @@ def main(data_path, batch_size=3):
     if not os.path.exists(base_results_dir):
         os.makedirs(base_results_dir)
     
-    if meta_model_name == "deepseek-reasoner":
-        safe_model_name = "DeepSeek-R1"  
-    elif "/" in meta_model_name:
+    if "/" in meta_model_name:
         safe_model_name = meta_model_name.split("/")[-1]
     else:
         safe_model_name = meta_model_name
@@ -246,6 +255,6 @@ def main(data_path, batch_size=3):
 if __name__ == "__main__":
     data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
                             "pokerbench_data", 
-                            "sample_of_100_postflop.json")
+                            "withpotodds_postflop_60k_sampled.json")
     # Adjust batch size based on your API rate limits and system capabilities
-    main(data_path, batch_size=50)
+    main(data_path, batch_size=1000)

@@ -2,3 +2,4 @@ vllm
 openai
 together
 datasets
+google-genai

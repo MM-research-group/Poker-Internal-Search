@@ -51,7 +51,7 @@ Your tasks are:
 
 Opponent Range Analysis Verification:
 - Analyze the reasoning that identifies the opponent's possible holdings, considering their pre-flop, flop, and subsequent actions.
-- Evaluate whether the explanation logically categorizes the opponent’s range into segments such as made hands, draws, and potential bluffs.
+- Evaluate whether the explanation logically categorizes the opponent's range into segments such as made hands, draws, and potential bluffs.
 - Assess if the explanation provides an accurate estimation of the proportion or likelihood of various holdings (e.g., the balance between draws and made hands).
 - Flag any inaccuracies, misinterpretations, or omissions in the opponent range analysis and provide corrections.
 
@@ -66,18 +66,41 @@ Proposed Reasoning: {proposed_reasoning}
     """.format(gamestate=gamestate, optimal_action=optimal_action, proposed_reasoning=proposed_reasoning)
     return prompt
 
+def prompt_board_and_range_verifier(gamestate, optimal_action, proposed_reasoning):
+    prompt = """
+You are an expert in poker analysis for 6-player no-limit hold'em. Your task is to evaluate two key portions of the chain-of-thought reasoning below based on the provided game state:
 
-def prompt_meta_verifier(gamestate, optimal_action, proposed_reasoning, board_output, range_estimation_output):
+1. Board Texture Analysis Verification:
+- Analyze the reasoning that discusses the board texture, connectivity, and potential draws.
+- Evaluate whether the explanation correctly identifies key board characteristics like wetness/dryness, paired boards, and draw possibilities.
+- Verify the accuracy of statements about coordinated cards, flush possibilities, straight possibilities, and other texture-related observations.
+- Check if the reasoning correctly assesses the board's interaction with potential hand ranges.
+
+2. Opponent Range Analysis Verification:
+- Analyze the reasoning that identifies the opponent's possible holdings, considering their pre-flop, flop, and subsequent actions.
+- Evaluate whether the explanation logically categorizes the opponent's range into segments such as made hands, draws, and potential bluffs.
+- Assess if the explanation provides an accurate estimation of the proportion or likelihood of various holdings (e.g., the balance between draws and made hands).
+
+Output Requirements:
+- Provide revised versions of both the board analysis and opponent range estimation sections with corrections applied.
+- Include brief summaries of the changes you made to each section.
+- If the explanation is missing either a board analysis or range analysis, make sure to add them.
+
+Game State: {gamestate}
+Optimal Action: {optimal_action}
+Proposed Reasoning: {proposed_reasoning}
+    """.format(gamestate=gamestate, optimal_action=optimal_action, proposed_reasoning=proposed_reasoning)
+    return prompt
+
+def prompt_meta_verifier(gamestate, optimal_action, proposed_reasoning, board_and_range_output):
     prompt = """
 You are an expert poker strategist in 6-player no-limit hold'em. Your task is to review a chain-of-thought explanation for determining the optimal action in a specific poker scenario. Below you are provided:
 1. The original proposed chain-of-thought explanation.
-2. The revised board analysis output.
-3. The revised opponent range estimation output.
+2. The revised board and opponent range analysis output.
 
 Please Do the Following:
 1. Review the proposed chain-of-thought explanation.
-2. Review the revised board analysis output.
-3. Review the revised opponent range estimation output.
+2. Review the revised board and opponent range analysis.
 
 Now, your task:
 - Determine if the corrections make sense, if there are any.
@@ -98,18 +121,14 @@ Optimal Action: {optimal_action}
 
 Original Proposed Reasoning: {proposed_reasoning}
 
-Board Analysis Revision:
-{board_output}
-
-Opponent Range Estimation Revision:
-{range_estimation_output}
+Board and Opponent Range Analysis Revision:
+{board_and_range_output}
 
 Please proceed step by step in your verification.
     """.format(
         gamestate=gamestate,
         optimal_action=optimal_action,
         proposed_reasoning=proposed_reasoning,
-        board_output=board_output,
-        range_estimation_output=range_estimation_output
+        board_and_range_output=board_and_range_output
     )
     return prompt

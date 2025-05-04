@@ -3,12 +3,41 @@ from openai import OpenAI
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
 from collections import defaultdict
+import os
+import json
+from dotenv import load_dotenv
 
 ## global variables
 _tokenizer = None
 _openai_model_name = 'gpt-4o'
 _client = None
 _model = defaultdict(lambda: None)
+
+def setup_hf_env():
+    """Set up Hugging Face token from config file or .env file."""
+    load_dotenv()
+    
+    if os.getenv('HF_TOKEN'):
+        print("Using HF_TOKEN from environment variables")
+        return os.getenv('HF_HOME')
+    
+    try:
+        dir_of_this_script = os.path.dirname(os.path.abspath(__file__))
+        path_to_config = os.path.join(dir_of_this_script, 'configs', 'config.json')
+        
+        if os.path.exists(path_to_config):
+            with open(path_to_config, 'r') as config_file:
+                config_data = json.load(config_file)
+            
+            if "HF_TOKEN" in config_data:
+                os.environ['HF_TOKEN'] = config_data["HF_TOKEN"]
+                print("Using HF_TOKEN from config file")
+                return os.getenv('HF_HOME')
+    except Exception as e:
+        print(f"Error loading config: {e}")
+    
+    print("Warning: HF_TOKEN not found in environment or config file")
+    return None
 
 def load_model(model_name):
     """Generic function to either load a VLLM model or a client (e.g. OpenAI)."""
@@ -25,7 +54,7 @@ def get_openai_client():
         _client = OpenAI()
     return _client
 
-def load_vllm_model(model_name="meta-llama/meta-llama-3.1-70b-instruct"):
+def load_vllm_model(model_name="meta-llama/meta-llama-3.1-8b-instruct"):
     global _model
     if _model[model_name] is None:
         torch.cuda.empty_cache()

@@ -329,7 +329,7 @@ def main(data_path, batch_size=3):
 
 if __name__ == "__main__":
     data_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                            "pokerbench_data", 
-                            "withpotodds_postflop_60k_sampled.json")
+                            "pokerbench_data/15k_samples", 
+                            "sample_first_15k_postflop_chunk.json")
     # Adjust batch size based on your API rate limits and system capabilities
     main(data_path, batch_size=100)

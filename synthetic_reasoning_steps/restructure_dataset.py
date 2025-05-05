@@ -3,14 +3,6 @@ import json
 import os
 
 def restructure_json(input_file, output_file=None):
-    """
-    Restructure a JSON file by appending optimal_action to meta_response and
-    retaining only 'input' and 'meta_response' fields.
-    
-    Args:
-        input_file (str): Path to input JSON file
-        output_file (str, optional): Path to output JSON file. If None, will modify the input file.
-    """
     # Default output to input if not specified
     if output_file is None:
         output_file = input_file

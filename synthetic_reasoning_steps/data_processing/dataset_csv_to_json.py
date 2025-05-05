@@ -314,9 +314,9 @@ def poker_csv_to_json(dataset: pd.DataFrame, preflop=True):
     return dataset_json
 
 if __name__ == "__main__":
-    CSV_FILENAME = "/home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data/withpotodds_postflop_500k_train_set_game_scenario_information.csv"
+    CSV_FILENAME = "/home/xuandong/mnt/poker/Poker-Internal-Search/pokerbench_data/withpotodds_postflop_10k_test_set_game_scenario_information.csv"
     IS_PREFLOP = False
-    JSON_FILENAME = "/home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data/withpotodds_postflop_500k_train_set.json"
+    JSON_FILENAME = "/home/xuandong/mnt/poker/Poker-Internal-Search/pokerbench_data/withpotodds_postflop_10k_test_set.json"
 
     dataset = pd.read_csv(CSV_FILENAME).fillna("")
     dataset_json = poker_csv_to_json(dataset, preflop=IS_PREFLOP)

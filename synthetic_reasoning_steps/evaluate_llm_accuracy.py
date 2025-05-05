@@ -278,3 +278,21 @@ def cleanup_resources(model):
 
 if __name__ == "__main__":
     main() 
+
+    '''
+    Expected output:
+        {
+            "accuracy": 0.0,
+            "correct_count": 0,
+            "total_count": 2,
+            "results": [
+                {
+                    "input": "Poker scenario...",
+                    "optimal_action": "bet 3",
+                    "predicted_action": "call",
+                    "full_response": blablabla,
+                    "is_correct": false
+                }
+            ]
+        }
+    '''

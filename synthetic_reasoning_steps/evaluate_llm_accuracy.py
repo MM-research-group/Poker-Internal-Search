@@ -203,21 +203,17 @@ def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    # Set CUDA device if specified
     if args.device_num is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = args.device_num
         logger.info(f"Using GPU device {args.device_num}")
     
-    # Set up environment (including HF_TOKEN)
     setup_environment()
     
-    # Load dataset
     dataset = load_dataset(args.dataset)
     if not dataset:
         logger.error(f"Failed to load dataset from {args.dataset}")
         return
     
-    # Load model
     model = None
     try:
         model = load_model_instance(args.model)
@@ -226,13 +222,11 @@ def main():
         logger.error(f"Error loading model: {e}")
         return
     
-    # Create sampling parameters
     sampling_params = create_sampling_params(
         temperature=args.temp,
         max_tokens=args.max_tokens
     )
     
-    # Evaluate
     try:
         results = evaluate_dataset(
             model=model,
@@ -241,18 +235,15 @@ def main():
             output_file=args.output
         )
         
-        # Print summary
         logger.info(f"Final accuracy: {results['accuracy']:.2%}")
         
     except Exception as e:
         logger.error(f"Error during evaluation: {e}")
     finally:
-        # Clean up resources
         cleanup_resources(model)
 
 def cleanup_resources(model):
     """Clean up resources to prevent NCCL warnings and memory leaks."""
-    # Properly destroy process groups
     try:
         import torch.distributed as dist
         if dist.is_initialized():
@@ -261,7 +252,6 @@ def cleanup_resources(model):
     except Exception as e:
         logger.warning(f"Error during process group cleanup: {e}")
     
-    # Free model resources
     if model is not None:
         try:
             logger.info("Freeing model resources...")
@@ -269,7 +259,6 @@ def cleanup_resources(model):
         except Exception as e:
             logger.warning(f"Error freeing model resources: {e}")
     
-    # Clear CUDA cache
     try:
         torch.cuda.empty_cache()
         logger.info("CUDA cache cleared")

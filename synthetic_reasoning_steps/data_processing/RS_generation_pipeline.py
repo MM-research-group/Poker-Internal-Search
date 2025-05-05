@@ -8,7 +8,7 @@ Usage:
 
 Example:
     python synthetic_reasoning_steps/data_processing/RS_generation_pipeline.py\
-        /home/xuandongz/mnt/MMteam_cs194/Poker-Internal-Search/synthetic_reasoning_steps/pokerbench_data/15k_samples/sample_third_15k_postflop_chunk.json\
+        /home/xuandong/mnt/poker/Poker-Internal-Search/pokerbench_data/7.5k_samples/sample_first_7.5k_postflop_chunk.json\
         --batch_size 100
 '''
 

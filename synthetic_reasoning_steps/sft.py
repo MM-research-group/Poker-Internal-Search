@@ -12,6 +12,7 @@ Usage:
         [--lora_r LORA_R]
         [--lora_alpha LORA_ALPHA]
         [--lora_dropout LORA_DROPOUT]
+        [--gpu_ids GPU_IDS]  # Added GPU control
 
 This script implements a simple PEFT SFT pipeline using LoRA to finetune LLMs.
 """
@@ -30,7 +31,7 @@ from transformers import (
     BitsAndBytesConfig,
     HfArgumentParser,
     TrainingArguments,
-    DataCollatorForSeq2Seq,
+    DataCollatorForLanguageModeling,
     set_seed
 )
 from peft import (
@@ -79,7 +80,34 @@ def parse_arguments():
                        help='LoRA dropout')
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed for reproducibility')
+    parser.add_argument('--gpu_ids', type=str, default=None,
+                       help='Comma-separated list of GPU IDs to use (e.g., "0,1,2")')
     return parser.parse_args()
+
+def setup_gpu_environment(gpu_ids=None):
+    """Configure GPU environment based on provided GPU IDs.
+    
+    Args:
+        gpu_ids (str, optional): Comma-separated list of GPU IDs
+    """
+    if gpu_ids:
+        # For simplicity, use just the first GPU if multiple are specified
+        first_gpu = gpu_ids.split(',')[0]
+        os.environ["CUDA_VISIBLE_DEVICES"] = first_gpu
+        logger.info(f"Set CUDA_VISIBLE_DEVICES to {first_gpu} (using only first GPU for simplicity)")
+        
+    # Log available devices
+    if torch.cuda.is_available():
+        device_count = torch.cuda.device_count()
+        logger.info(f"Available GPU count: {device_count}")
+        for i in range(device_count):
+            logger.info(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+    else:
+        logger.warning("No CUDA devices available. Training will be slow.")
+    
+    # Set default device to cuda:0 since we're using a single GPU
+    torch.cuda.set_device(0)
+    logger.info(f"Current device set to: cuda:{torch.cuda.current_device()}")
 
 def prepare_dataset(dataset_path, tokenizer, max_length):
     """Prepare and tokenize dataset for training.
@@ -105,23 +133,26 @@ def prepare_dataset(dataset_path, tokenizer, max_length):
             completion = item["output"]
             
             # Format into chat template
-            processed_data.append({
-                "text": tokenizer.apply_chat_template([
-                    {"role": "user", "content": prompt},
-                    {"role": "assistant", "content": completion}
-                ], tokenize=False)
-            })
+            formatted_text = tokenizer.apply_chat_template([
+                {"role": "user", "content": prompt},
+                {"role": "assistant", "content": completion}
+            ], tokenize=False)
+            
+            processed_data.append({"text": formatted_text})
     
     dataset = Dataset.from_list(processed_data)
     
-    # Define tokenization function
+    # Tokenize function with proper handling for causal language modeling
     def tokenize_function(examples):
-        return tokenizer(
+        outputs = tokenizer(
             examples["text"],
             truncation=True,
             max_length=max_length,
             padding="max_length",
+            return_tensors=None,  # Return as lists, not tensors
         )
+        
+        return outputs
     
     # Tokenize dataset
     tokenized_dataset = dataset.map(
@@ -161,10 +192,11 @@ def load_base_model(model_name):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     
-    # Load model in 4-bit precision
+    # Load model in 4-bit precision, with all parameters on a single device
+    logger.info("Loading model with device_map='cuda:0' to keep all parameters on a single GPU")
     model = AutoModelForCausalLM.from_pretrained(
         model_path,
-        device_map="auto",
+        device_map="cuda:0",  # Place all parameters on a single GPU
         quantization_config=bnb_config,
         torch_dtype=torch.float16,
         trust_remote_code=True,
@@ -199,6 +231,7 @@ def train_model(args, model, tokenizer, train_dataset):
     
     # Apply LoRA to model
     model = get_peft_model(model, lora_config)
+    model.print_trainable_parameters()
     
     # Training arguments
     training_args = TrainingArguments(
@@ -219,14 +252,16 @@ def train_model(args, model, tokenizer, train_dataset):
         warmup_ratio=0.03,
         bf16=False,  # Use fp16 instead as it's more widely supported
         fp16=True,
+        # Explicitly set no parallelism to avoid device conflicts
+        deepspeed=None,
+        local_rank=-1,
+        ddp_find_unused_parameters=False,
     )
     
-    # Create data collator for language modeling
-    data_collator = DataCollatorForSeq2Seq(
-        tokenizer, 
-        pad_to_multiple_of=8,
-        return_tensors="pt",
-        padding=True
+    # Create data collator for language modeling with labels derived from inputs
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False  # Important: we're doing causal LM, not masked LM
     )
     
     # Create trainer
@@ -255,6 +290,9 @@ def main():
     
     # Set seed for reproducibility
     set_seed(args.seed)
+    
+    # Setup GPU environment
+    setup_gpu_environment(args.gpu_ids)
     
     # Setup HF environment
     setup_hf_env()

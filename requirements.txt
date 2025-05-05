@@ -13,3 +13,6 @@ tqdm>=4.65.0
 python-dotenv>=1.0.0
 tensorboard>=2.14.0
 vllm>=0.3.0 
+python-dotenv
+matplotlib
+seaborn

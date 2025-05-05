@@ -76,10 +76,10 @@ def evaluate_dataset(model, dataset, sampling_params, output_file=None):
     
     for item in tqdm(dataset, desc="Processing"):
         prompt = item["input"]
-        expected_action = item.get("optimal_action", "").strip().lower()
+        optimal_action = item.get("optimal_action", "").strip().lower()
         
         # Skip if no expected action
-        if not expected_action:
+        if not optimal_action:
             logger.warning(f"Example missing 'optimal_action' field, skipping")
             continue
         
@@ -94,7 +94,7 @@ def evaluate_dataset(model, dataset, sampling_params, output_file=None):
                 predicted_action = predicted_action.lower()
                 
                 # Check if prediction matches expected action
-                is_correct = predicted_action == expected_action
+                is_correct = predicted_action == optimal_action
                 if is_correct:
                     correct_count += 1
                 total_count += 1
@@ -102,14 +102,14 @@ def evaluate_dataset(model, dataset, sampling_params, output_file=None):
                 # Save result
                 result_item = {
                     "input": prompt,
-                    "expected_action": expected_action,
+                    "optimal_action": optimal_action,
                     "predicted_action": predicted_action,
                     "full_response": response,
                     "is_correct": is_correct
                 }
                 results.append(result_item)
                 
-                logger.debug(f"Expected: {expected_action}, Predicted: {predicted_action}, Correct: {is_correct}")
+                logger.debug(f"Expected: {optimal_action}, Predicted: {predicted_action}, Correct: {is_correct}")
             else:
                 logger.warning(f"Failed to extract action from response")
                 

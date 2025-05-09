@@ -18,7 +18,7 @@ The trace begins with the current game context (e.g., public board cards, pot si
 *   **Hero Decision Nodes:**
     *   **Context:** Full public game state, Hero's private hole cards, and action history leading to this decision point.
     *   **LLM Action Proposal:** The LLM first proposes a set of its own strategically relevant actions (e.g., check, fold, call, bet small, bet medium, bet large). The specific bet sizes considered can be a canonical set or learned.
-    *   **Immediate EV Estimation:** For each proposed action, the LLM outputs an immediate EV estimate. This EV is predicted by the LLM's internal value function, which has been trained to approximate the EV calculated by a poker solver for taking that action in the given state, without lookahead beyond the immediate action's consequences (e.g., opponent folding to a bet).
+    *   **Immediate EV Estimation:** For each proposed action, the LLM outputs an "immediate EV estimate." This EV is predicted by the LLM's internal value function, which has been trained to approximate the **full, game-theoretic Expected Value (EV) calculated by a poker solver for Hero taking that specific action from the current state.** This solver-derived EV inherently accounts for all possible opponent responses, all possible future cards, and assumes optimal play from both sides for the remainder of the hand.
     *   *Example Snippet:*
         ```
         <Context board=AhKhQs pot=25bb hero_hand=AdJd ...>

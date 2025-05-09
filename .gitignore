@@ -14,3 +14,13 @@
 *.tar.7z
 *.tar.lzma
 *.tar.wim
+*.png
+*.pdf
+*.docx
+*.doc
+*.xls
+*.xlsx
+*.pptx
+*.pth
+*.pt
+*/output

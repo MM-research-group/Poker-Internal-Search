@@ -197,15 +197,66 @@ def process_output(raw_output):
         return raw_output.outputs[0].text.strip()
     return str(raw_output)
 
-def process_batch(model, examples, prompt_template=None, sampling_params=None, max_batch_size=16):
-    """Process a batch of examples in parallel.
+def generate_batch(model, prompts, sampling_params, batch_size=8):
+    """Generate responses for a batch of prompts.
+    
+    Args:
+        model: The loaded model
+        prompts (list): List of prompts to process
+        sampling_params: Parameters for sampling
+        batch_size (int): Number of prompts to process in one batch
+        
+    Returns:
+        list: List of outputs from the model
+    """
+    # Process in manageable batches
+    all_outputs = []
+    
+    # Split prompts into batches of size batch_size
+    prompt_batches = [prompts[i:i+batch_size] for i in range(0, len(prompts), batch_size)]
+    
+    total_batches = len(prompt_batches)
+    logger.info(f"Processing {len(prompts)} prompts in {total_batches} batches of size {batch_size}")
+    
+    # Process each batch
+    for i, batch in enumerate(prompt_batches):
+        try:
+            logger.debug(f"Processing batch {i+1}/{total_batches} with {len(batch)} prompts")
+            start_time = time.time()
+            
+            # Generate responses for the batch
+            batch_outputs = model.generate(batch, sampling_params)
+            
+            end_time = time.time()
+            logger.debug(f"Batch {i+1} completed in {end_time - start_time:.2f}s")
+            
+            # Add outputs to the list
+            all_outputs.extend(batch_outputs)
+        except Exception as e:
+            logger.error(f"Error processing batch {i+1}: {e}")
+            
+            # Fallback to processing one by one if batch fails
+            logger.warning("Falling back to processing prompts one by one")
+            for prompt in batch:
+                try:
+                    single_output = model.generate([prompt], sampling_params)
+                    all_outputs.extend(single_output)
+                except Exception as inner_e:
+                    logger.error(f"Error processing single prompt: {inner_e}")
+                    # Add None to maintain alignment with input prompts
+                    all_outputs.append(None)
+    
+    return all_outputs
+
+def process_batch_examples(model, examples, prompt_template, sampling_params, batch_size=8):
+    """Process a batch of examples using the model.
     
     Args:
         model: The loaded model
         examples (list): List of examples to process
-        prompt_template (str, optional): Template for formatting prompts
+        prompt_template (str): Template for formatting prompts
         sampling_params: Parameters for sampling
-        max_batch_size (int): Maximum batch size for generation
+        batch_size (int): Number of examples to process in one batch
         
     Returns:
         list: Results for each example in the batch
@@ -213,43 +264,25 @@ def process_batch(model, examples, prompt_template=None, sampling_params=None, m
     # Format prompts for all examples
     prompts = [format_prompt(example, prompt_template) for example in examples]
     
-    # Split into batches of max_batch_size
-    prompt_batches = [prompts[i:i+max_batch_size] for i in range(0, len(prompts), max_batch_size)]
-    
-    all_outputs = []
+    # Generate responses in batches
     start_time = time.time()
-    
-    # Process each batch
-    for batch in prompt_batches:
-        try:
-            batch_outputs = model.generate(batch, sampling_params)
-            all_outputs.extend(batch_outputs)
-        except Exception as e:
-            # Fallback to processing one at a time if batching fails
-            logger.warning(f"Batch processing failed, falling back to individual processing: {e}")
-            for prompt in batch:
-                try:
-                    output = model.generate([prompt], sampling_params)
-                    all_outputs.extend(output)
-                except Exception as e2:
-                    logger.error(f"Individual processing failed for prompt: {e2}")
-                    all_outputs.append(None)
-    
+    all_outputs = generate_batch(model, prompts, sampling_params, batch_size)
     end_time = time.time()
     total_time = end_time - start_time
     
-    # Combine results with examples
+    # Process results
     results = []
     for i, example in enumerate(examples):
         result = example.copy()
         result["prompt"] = prompts[i]
         
         if i < len(all_outputs) and all_outputs[i] is not None:
-            result["model_output"] = process_output(all_outputs[i])
+            output_text = process_output(all_outputs[i])
+            result["model_output"] = output_text
         else:
             result["model_output"] = "ERROR: Failed to generate output"
-            
-        # We don't have individual times, so we distribute the total time
+        
+        # Add generation time (approximated since we're using batching)
         result["generation_time"] = total_time / len(examples)
         results.append(result)
     
@@ -264,7 +297,31 @@ def find_local_model_path(model_name):
     Returns:
         str or None: Path to the local model if found, None otherwise
     """
-    local_model_dir = f"/srv/share/huggingface/hub/models--{model_name.replace('/', '--')}"
+    # For models in the format "meta-llama/Llama-3.1-8B-Instruct" 
+    if "meta-llama/llama-3.1" in model_name.lower() or "meta-llama/Llama-3.1" in model_name.lower():
+        # Handle the specific Llama 3.1 model
+        specific_path = "/srv/share/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct"
+        if os.path.exists(specific_path):
+            logger.info(f"Found Llama 3.1 model at predefined path: {specific_path}")
+            # Find the most recent snapshot
+            snapshot_dir = os.path.join(specific_path, 'snapshots')
+            if os.path.exists(snapshot_dir):
+                snapshots = [d for d in os.listdir(snapshot_dir) if os.path.isdir(os.path.join(snapshot_dir, d))]
+                if snapshots:
+                    snapshots.sort(reverse=True)
+                    latest_snapshot = os.path.join(snapshot_dir, snapshots[0])
+                    logger.info(f"Using latest snapshot: {latest_snapshot}")
+                    return latest_snapshot
+            return specific_path
+    
+    # Convert model name to the directory format used by HuggingFace
+    if "/" in model_name:
+        org, model_id = model_name.split("/", 1)
+        local_model_dir = f"/srv/share/huggingface/hub/models--{org}--{model_id}"
+    else:
+        local_model_dir = f"/srv/share/huggingface/hub/models--{model_name}"
+    
+    local_model_dir = local_model_dir.replace("/", "--")
     
     try:
         # Check if directory exists and contains model files

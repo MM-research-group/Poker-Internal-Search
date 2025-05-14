@@ -3,7 +3,7 @@ Usage:
     python synthetic_reasoning_steps/sft.py 
         --model_name MODEL_NAME 
         --traindata_path DATASET_PATH 
-        --output_dir OUTPUT_PATH 
+        --model_save_path MODEL_SAVE_PATH 
         [--batch_size BATCH_SIZE] 
         [--learning_rate LEARNING_RATE]
         [--num_epochs NUM_EPOCHS]
@@ -12,9 +12,17 @@ Usage:
         [--lora_r LORA_R]
         [--lora_alpha LORA_ALPHA]
         [--lora_dropout LORA_DROPOUT]
-        [--gpu_ids GPU_IDS]  # Added GPU control
+        [--gpu_id GPU_ID] 
 
 This script implements a simple PEFT SFT pipeline using LoRA to finetune LLMs.
+
+Example:
+python -m synthetic_reasoning_steps.sft \
+    --model_name meta-llama/Llama-3.1-8B-Instruct \
+    --traindata_path data/synthetic_reasoning_steps/synthetic_reasoning_steps_train.json \
+    --model_save_path /home/xuandong/mnt/poker/michael-poker-synthetic-reasoning-steps/synthetic_reasoning_steps/sft_model_weights/peft_sft_llama3.1-8b_60k_train \
+    --gpu_id 0
+
 """
 
 import os
@@ -60,8 +68,8 @@ def parse_arguments():
                        help='Base model name to fine-tune')
     parser.add_argument('--traindata_path', type=str, required=True,
                        help='Path to JSON training dataset file')
-    parser.add_argument('--output_dir', type=str, required=True,
-                       help='Path to save the fine-tuned model')
+    parser.add_argument('--model_save_path', type=str, required=True,
+                       help='Directory path to save the fine-tuned model, tokenizer, and logs')
     parser.add_argument('--batch_size', type=int, default=4,
                        help='Batch size for training')
     parser.add_argument('--learning_rate', type=float, default=2e-4,
@@ -80,21 +88,19 @@ def parse_arguments():
                        help='LoRA dropout')
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed for reproducibility')
-    parser.add_argument('--gpu_ids', type=str, default=None,
-                       help='Comma-separated list of GPU IDs to use (e.g., "0,1,2")')
+    parser.add_argument('--gpu_id', type=int, default=None,
+                       help='The specific GPU ID to use (e.g., 0)')
     return parser.parse_args()
 
-def setup_gpu_environment(gpu_ids=None):
-    """Configure GPU environment based on provided GPU IDs.
+def setup_gpu_environment(gpu_id=None):
+    """Configure GPU environment based on provided GPU ID.
     
     Args:
-        gpu_ids (str, optional): Comma-separated list of GPU IDs
+        gpu_id (int, optional): The specific GPU ID to use
     """
-    if gpu_ids:
-        # For simplicity, use just the first GPU if multiple are specified
-        first_gpu = gpu_ids.split(',')[0]
-        os.environ["CUDA_VISIBLE_DEVICES"] = first_gpu
-        logger.info(f"Set CUDA_VISIBLE_DEVICES to {first_gpu} (using only first GPU for simplicity)")
+    if gpu_id is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+        logger.info(f"Set CUDA_VISIBLE_DEVICES to {gpu_id}")
         
     # Log available devices
     if torch.cuda.is_available():
@@ -235,7 +241,7 @@ def train_model(args, model, tokenizer, train_dataset):
     
     # Training arguments
     training_args = TrainingArguments(
-        output_dir=args.output_dir,
+        output_dir=args.model_save_path,
         num_train_epochs=args.num_epochs,
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
@@ -243,7 +249,7 @@ def train_model(args, model, tokenizer, train_dataset):
         weight_decay=0.01,
         save_strategy="epoch",
         logging_steps=10,
-        logging_dir=os.path.join(args.output_dir, "logs"),
+        logging_dir=os.path.join(args.model_save_path, "logs"),
         save_total_limit=3,
         remove_unused_columns=False,
         push_to_hub=False,
@@ -278,9 +284,9 @@ def train_model(args, model, tokenizer, train_dataset):
     trainer.train()
     
     # Save final model and tokenizer
-    logger.info(f"Saving fine-tuned model to {args.output_dir}")
-    model.save_pretrained(args.output_dir)
-    tokenizer.save_pretrained(args.output_dir)
+    logger.info(f"Saving fine-tuned model to {args.model_save_path}")
+    model.save_pretrained(args.model_save_path)
+    tokenizer.save_pretrained(args.model_save_path)
     
     return model
 
@@ -292,13 +298,13 @@ def main():
     set_seed(args.seed)
     
     # Setup GPU environment
-    setup_gpu_environment(args.gpu_ids)
+    setup_gpu_environment(args.gpu_id)
     
     # Setup HF environment
     setup_hf_env()
     
     # Create output directory
-    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(args.model_save_path, exist_ok=True)
     
     # Load base model and tokenizer
     logger.info(f"Loading base model: {args.model_name}")
@@ -311,7 +317,7 @@ def main():
     # Train model
     trained_model = train_model(args, model, tokenizer, train_dataset)
     
-    logger.info(f"Fine-tuning completed. Model saved to {args.output_dir}")
+    logger.info(f"Fine-tuning completed. Model saved to {args.model_save_path}")
 
 if __name__ == "__main__":
     main()
